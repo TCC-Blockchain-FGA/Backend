@@ -1,23 +1,22 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 RUN useradd -G root -ms /bin/bash indy
 
-RUN apt update -y && apt install -y software-properties-common
-RUN add-apt-repository ppa:deadsnakes/ppa
-RUN apt-get install -y python3.7
+# RUN apt update -y && apt install -y software-properties-common
+# RUN add-apt-repository ppa:deadsnakes/ppa
+# RUN apt-get install -y python3.7
 
 # Install environment
-RUN apt-get update -y && apt-get install -y \
-    wget \
-    python3.7 \
-    python-setuptools \
-    apt-transport-https \
-    ca-certificates \
-    software-properties-common
+RUN apt-get update -y && apt-get install -y wget
+RUN apt-get update -y && apt-get install -y python3
+RUN apt-get update -y && apt-get install -y python-setuptools
+RUN apt-get update -y && apt-get install -y apt-transport-https
+RUN apt-get update -y && apt-get install -y ca-certificates
+RUN apt-get update -y && apt-get install -y software-properties-common
 
 RUN apt install -y python3-pip
 
-RUN pip3 install -U Flask
+RUN pip3 install -U Flask[async]
 
 WORKDIR /home/indy
 
@@ -32,12 +31,6 @@ RUN add-apt-repository "deb https://repo.sovrin.org/sdk/deb bionic stable"
 RUN apt-get update
 RUN apt-get install -y libindy
 RUN apt-get install -y indy-cli
-
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y locales
-
-RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
-    dpkg-reconfigure --frontend=noninteractive locales && \
-    update-locale LANG=en_US.UTF-8
 
 ENV LANG en_US.UTF-8
 
