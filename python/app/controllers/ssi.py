@@ -6,10 +6,9 @@ import os
 from typing import Optional
 from indy.error import ErrorCode, IndyError
 from src.utils import get_pool_genesis_txn_path, run_coroutine, PROTOCOL_VERSION
-import database as database
 import subprocess
 import uuid
-import database as database
+import app.controllers.database as database
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
