@@ -33,6 +33,38 @@ def user_by_login(login):
 
 # ############################################# AUTH
 
+def updateRegister(request):
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    jsonData = request.get_json()
+    if jsonData['id'] != "":
+        try:
+            cursor.execute("""
+                UPDATE users
+                SET login = '%s',
+                    name = '%s',
+                    phone = '%s',
+                    gender = '%s',
+                    dateOfBirth = '%s',
+                    address = '%s',
+                    maritalStatus = '%s',
+                    multipleBirth = '%s',
+                    contactRelationship = '%s',
+                    contactName = '%s',
+                    contactPhone = '%s',
+                    contactAddress = '%s',
+                    contactGender = '%s',
+                    languages = '%s',
+                    preferredLanguage = '%s',
+                    generalPractitioner = '%s'
+                WHERE id = %s;
+            """%(jsonData['login'], jsonData['name'], jsonData['phone'], jsonData['gender'], jsonData['dateOfBirth'], jsonData['address'], jsonData['maritalStatus'], jsonData['multipleBirth'], jsonData['contactRelationship'], jsonData['contactName'], jsonData['contactPhone'], jsonData['contactAddress'], jsonData['contactGender'], jsonData['languages'], jsonData['preferredLanguage'], jsonData['generalPractitioner'], jsonData['id']))
+            conn.commit()
+            return jsonify({'message': 'sucess'}), 200
+        except:
+            return "Intern Erro", 500
+    return "Intern Erro", 500
+
 def register(request):
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)

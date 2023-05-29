@@ -33,7 +33,7 @@ def userData():
     user = auth(request)
     if not user:
         return "Bad Request", 400
-    return jsonify({"login": user[1],"phone": user[2],"name": user[3],"gender": user[5],"dateOfBirth": user[6],"address": user[7],"maritalSates": user[8],"multipleBirth": user[9],"contactRelationship": user[10],"contactName": user[11],"contactPhone": user[12],"contactAddress": user[13],"contactGender": user[14],"languages": user[15],"preferredLanguage": user[16],"generalPractitioner": user[17]}), 200
+    return jsonify({"id": user[0], "login": user[1],"phone": user[2],"name": user[3],"gender": user[5],"dateOfBirth": user[6],"address": user[7],"maritalStatus": user[8],"multipleBirth": user[9],"contactRelationship": user[10],"contactName": user[11],"contactPhone": user[12],"contactAddress": user[13],"contactGender": user[14],"languages": user[15],"preferredLanguage": user[16],"generalPractitioner": user[17]}), 200
 
 @app.route("/login", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)
@@ -44,3 +44,8 @@ def login():
 @cross_origin(supports_credentials=True)
 def register():
     return database.register(request)
+
+@app.route("/updateRegister", methods=["GET", "POST"])
+@cross_origin(supports_credentials=True)
+def updateRegister():
+    return database.updateRegister(request)

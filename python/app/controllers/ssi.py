@@ -55,7 +55,7 @@ async def run():
 async def create_wallet_and_set_trust_anchor(name):
     global pool_handle, admin_wallet, admin_did
     wallet_config = json.dumps({"id": f'{uuid.uuid4()}'})
-    wallet_credentials = json.dumps({"key": "wallet_key"})
+    wallet_credentials = json.dumps({"key": f'wallet_key_{uuid.uuid4()}'})
     obj_wallet, admin_obj_key, obj_admin_did, obj_admin_key, _ = await onboarding(pool_handle, "Admin", admin_wallet, admin_did, name, None, wallet_config, wallet_credentials)
     obj_did = await get_verinym(pool_handle, "Admin", admin_wallet, admin_did, admin_obj_key, name, obj_wallet, obj_admin_did, obj_admin_key, 'TRUST_ANCHOR')
     # print(wallet_config, wallet_credentials, obj_wallet)
@@ -64,7 +64,7 @@ async def create_wallet_and_set_trust_anchor(name):
 async def create_wallet(org, org_wallet, org_did, name):
     global pool_handle
     wallet_config = json.dumps({"id": f'{uuid.uuid4()}'})
-    wallet_credentials = json.dumps({"key": "wallet_key"})
+    wallet_credentials = json.dumps({"key": f'wallet_key_{uuid.uuid4()}'})
     obj_wallet, org_obj_key, obj_org_did, obj_org_key, org_obj_connection_response = await onboarding(pool_handle, org, org_wallet, org_did, name, None, wallet_config, wallet_credentials)
     return True
 
@@ -87,337 +87,68 @@ async def create_schema_definition(obj_did, obj_wallet, schema_id):
     await send_cred_def(pool_handle, obj_wallet, obj_did, obj_cred_def_json)
     return True
 
+async def create_certificate(obj_did, obj_wallet, schema_id):
+     obj_wallet_config = json.dumps({"id": obj_wallet})
+     obj_wallet_credentials = json.dumps({"key": obj_wallet_key})
+     obj_wallet, org_obj_key, obj_org_did, obj_org_key, org_obj_connection_response \
+         = await onboarding(pool_handle, org_name, org_wallet, org_did, obj_name, None, obj_wallet_config,
+                            obj_wallet_credentials)
 
-# async def run():
-#      logger.info("\"Unb\" -> Get \"Transcript\" Schema from Ledger")
-     # (_, transcript_schema) = await get_schema(pool_handle, unb_did, transcript_schema_id)
-     #
-     # logger.info("\"Unb\" -> Create and store in Wallet \"Unb Transcript\" Credential Definition")
-     # (unb_transcript_cred_def_id, unb_transcript_cred_def_json) = \
-     #     await anoncreds.issuer_create_and_store_credential_def(unb_wallet, unb_did, transcript_schema,
-     #                                                            'TAG1', 'CL', '{"support_revocation": false}')
-     #
-     # logger.info("\"Unb\" -> Send  \"Unb Transcript\" Credential Definition to Ledger")
-     # await send_cred_def(pool_handle, unb_wallet, unb_did, unb_transcript_cred_def_json)
-     #
-     # input("\n\n\n\n\ncontinuar?")
-     #
-     # logger.info("==============================")
-     # logger.info("=== definicao das credenciais da empresa X ==")
-     # logger.info("------------------------------")
-     #
-     # logger.info("\"empresax\" -> Get from Ledger \"Job-Certificate\" Schema")
-     # (_, job_certificate_schema) = await get_schema(pool_handle, empresax_did, job_certificate_schema_id)
-     #
-     # logger.info("\"empresax\" -> Create and store in Wallet \"empresax Job-Certificate\" Credential Definition")
-     # (empresax_job_certificate_cred_def_id, empresax_job_certificate_cred_def_json) = \
-     #     await anoncreds.issuer_create_and_store_credential_def(empresax_wallet, empresax_did, job_certificate_schema,
-     #                                                            'TAG1', 'CL', '{"support_revocation": false}')
-     #
-     # logger.info("\"empresax\" -> Send \"empresax Job-Certificate\" Credential Definition to Ledger")
-     # await send_cred_def(pool_handle, empresax_wallet, empresax_did, empresax_job_certificate_cred_def_json)
-     #
-     # input("\n\n\n\n\ncontinuar?")
-     #
-     # logger.info("==============================")
-     # logger.info("==============================")
-     # logger.info("== Geracao das credenciais da Unb para emitir atestado de formado ==")
-     # logger.info("------------------------------")
-     #
-     # nilo_wallet_config = json.dumps({"id": " nilo_wallet"})
-     # nilo_wallet_credentials = json.dumps({"key": "nilo_wallet_key"})
-     # nilo_wallet, unb_nilo_key, nilo_unb_did, nilo_unb_key, unb_nilo_connection_response \
-     #     = await onboarding(pool_handle, "Unb", unb_wallet, unb_did, "nilo", None, nilo_wallet_config,
-     #                        nilo_wallet_credentials)
-     #
-     # logger.info("\"Unb\" -> Create \"Transcript\" Credential Offer for nilo")
-     # transcript_cred_offer_json = \
-     #     await anoncreds.issuer_create_credential_offer(unb_wallet, unb_transcript_cred_def_id)
-     #
-     # logger.info("\"Unb\" -> Get key for nilo did")
-     # nilo_unb_verkey = await did.key_for_did(pool_handle, empresax_wallet, unb_nilo_connection_response['did'])
-     #
-     # logger.info("\"Unb\" -> Authcrypt \"Transcript\" Credential Offer for nilo")
-     # authcrypted_transcript_cred_offer = await crypto.auth_crypt(unb_wallet, unb_nilo_key, nilo_unb_verkey,
-     #                                                             transcript_cred_offer_json.encode('utf-8'))
-     #
-     # logger.info("\"Unb\" -> Send authcrypted \"Transcript\" Credential Offer to nilo")
-     #
-     # logger.info("\"nilo\" -> Authdecrypted \"Transcript\" Credential Offer from unb")
-     # unb_nilo_verkey, authdecrypted_transcript_cred_offer_json, authdecrypted_transcript_cred_offer = \
-     #     await auth_decrypt(nilo_wallet, nilo_unb_key, authcrypted_transcript_cred_offer)
-     #
-     # logger.info("\"nilo\" -> Create and store \"nilo\" Master Secret in Wallet")
-     # nilo_master_secret_id = await anoncreds.prover_create_master_secret(nilo_wallet, None)
-     #
-     # logger.info("\"nilo\" -> Get \"unb Transcript\" Credential Definition from Ledger")
-     # (unb_transcript_cred_def_id, unb_transcript_cred_def) = \
-     #     await get_cred_def(pool_handle, nilo_unb_did, authdecrypted_transcript_cred_offer['cred_def_id'])
-     #
-     # logger.info("\"nilo\" -> Create \"Transcript\" Credential Request for unb")
-     # (transcript_cred_request_json, transcript_cred_request_metadata_json) = \
-     #     await anoncreds.prover_create_credential_req(nilo_wallet, nilo_unb_did,
-     #                                                  authdecrypted_transcript_cred_offer_json,
-     #                                                  unb_transcript_cred_def, nilo_master_secret_id)
-     #
-     # logger.info("\"nilo\" -> Authcrypt \"Transcript\" Credential Request for unb")
-     # authcrypted_transcript_cred_request = await crypto.auth_crypt(nilo_wallet, nilo_unb_key, unb_nilo_verkey,
-     #                                                               transcript_cred_request_json.encode('utf-8'))
-     #
-     # logger.info("\"nilo\" -> Send authcrypted \"Transcript\" Credential Request to unb")
-     #
-     # logger.info("\"unb\" -> Authdecrypt \"Transcript\" Credential Request from nilo")
-     # nilo_unb_verkey, authdecrypted_transcript_cred_request_json, _ = \
-     #     await auth_decrypt(unb_wallet, unb_nilo_key, authcrypted_transcript_cred_request)
-     #
-     # logger.info("\"unb\" -> Create \"Transcript\" Credential for nilo")
-     # transcript_cred_values = json.dumps({
-     #     "first_name": {"raw": "nilo", "encoded": "1139481716457488690172217916278103335"},
-     #     "last_name": {"raw": "mendonca", "encoded": "5321642780241790123587902456789123452"},
-     #     "degree": {"raw": "bacharelado, engenharia de software", "encoded": "12434523576212321"},
-     #     "status": {"raw": "graduacao", "encoded": "2213454313412354"},
-     #     "ssn": {"raw": "123-45-6789", "encoded": "3124141231422543541"},
-     #     "year": {"raw": "2023", "encoded": "2015"},
-     #     "average": {"raw": "5", "encoded": "5"}
-     # })
-     #
-     # transcript_cred_json, _, _ = \
-     #     await anoncreds.issuer_create_credential(unb_wallet, transcript_cred_offer_json,
-     #                                              authdecrypted_transcript_cred_request_json,
-     #                                              transcript_cred_values, None, None)
-     #
-     # logger.info("\"unb\" -> Authcrypt \"Transcript\" Credential for nilo")
-     # authcrypted_transcript_cred_json = await crypto.auth_crypt(unb_wallet, unb_nilo_key, nilo_unb_verkey,
-     #                                                            transcript_cred_json.encode('utf-8'))
-     #
-     # logger.info("\"unb\" -> Send authcrypted \"Transcript\" Credential to nilo")
-     #
-     # logger.info("\"nilo\" -> Authdecrypted \"Transcript\" Credential from unb")
-     # _, authdecrypted_transcript_cred_json, _ = \
-     #     await auth_decrypt(nilo_wallet, nilo_unb_key, authcrypted_transcript_cred_json)
-     #
-     # logger.info("\"nilo\" -> Store \"Transcript\" Credential from unb")
-     # await anoncreds.prover_store_credential(nilo_wallet, None, transcript_cred_request_metadata_json,
-     #                                         authdecrypted_transcript_cred_json, unb_transcript_cred_def, None)
-     #
-     # input("\n\n\n\n\ncontinuar?")
-     #
-     # logger.info("==============================")
-     # logger.info("==============================")
-     # logger.info("== Verificacao de vinculo com a Unb e ==")
-     # logger.info("== Geracao das credenciais da Empresa X para emitir atestado de vinculo ==")
-     # logger.info("------------------------------")
-     #
-     # nilo_wallet, empresax_nilo_key, nilo_empresax_did, nilo_empresax_key, empresax_nilo_connection_response = \
-     #     await onboarding(pool_handle, "empresax", empresax_wallet, empresax_did, "nilo", nilo_wallet, nilo_wallet_config,
-     #                      nilo_wallet_credentials)
-     #
-     # logger.info("\"empresax\" -> Create \"Job-Application\" Proof Request")
-     # job_application_proof_request_json = json.dumps({
-     #     'nonce': '1432422343242122312411212',
-     #     'name': 'Job-Application',
-     #     'version': '0.1',
-     #     'requested_attributes': {
-     #         'attr1_referent': {
-     #             'name': 'first_name'
-     #         },
-     #         'attr2_referent': {
-     #             'name': 'last_name'
-     #         },
-     #         'attr3_referent': {
-     #             'name': 'degree',
-     #             'restrictions': [{'cred_def_id': unb_transcript_cred_def_id}]
-     #         },
-     #         'attr4_referent': {
-     #             'name': 'status',
-     #             'restrictions': [{'cred_def_id': unb_transcript_cred_def_id}]
-     #         },
-     #         'attr5_referent': {
-     #             'name': 'ssn',
-     #             'restrictions': [{'cred_def_id': unb_transcript_cred_def_id}]
-     #         },
-     #         'attr6_referent': {
-     #             'name': 'phone_number'
-     #         }
-     #     },
-     #     'requested_predicates': {
-     #         'predicate1_referent': {
-     #             'name': 'average',
-     #             'p_type': '>=',
-     #             'p_value': 4,
-     #             'restrictions': [{'cred_def_id': unb_transcript_cred_def_id}]
-     #         }
-     #     }
-     # })
-     #
-     # logger.info("\"empresax\" -> Get key for nilo did")
-     # nilo_empresax_verkey = await did.key_for_did(pool_handle, empresax_wallet, empresax_nilo_connection_response['did'])
-     #
-     # logger.info("\"empresax\" -> Authcrypt \"Job-Application\" Proof Request for nilo")
-     # authcrypted_job_application_proof_request_json = \
-     #     await crypto.auth_crypt(empresax_wallet, empresax_nilo_key, nilo_empresax_verkey,
-     #                             job_application_proof_request_json.encode('utf-8'))
-     #
-     # logger.info("\"empresax\" -> Send authcrypted \"Job-Application\" Proof Request to nilo")
-     #
-     # logger.info("\"nilo\" -> Authdecrypt \"Job-Application\" Proof Request from empresax")
-     # empresax_nilo_verkey, authdecrypted_job_application_proof_request_json, _ = \
-     #     await auth_decrypt(nilo_wallet, nilo_empresax_key, authcrypted_job_application_proof_request_json)
-     #
-     # logger.info("\"nilo\" -> Get credentials for \"Job-Application\" Proof Request")
-     #
-     # search_for_job_application_proof_request = \
-     #     await anoncreds.prover_search_credentials_for_proof_req(nilo_wallet,
-     #                                                             authdecrypted_job_application_proof_request_json, None)
-     #
-     # cred_for_attr1 = await get_credential_for_referent(search_for_job_application_proof_request, 'attr1_referent')
-     # cred_for_attr2 = await get_credential_for_referent(search_for_job_application_proof_request, 'attr2_referent')
-     # cred_for_attr3 = await get_credential_for_referent(search_for_job_application_proof_request, 'attr3_referent')
-     # cred_for_attr4 = await get_credential_for_referent(search_for_job_application_proof_request, 'attr4_referent')
-     # cred_for_attr5 = await get_credential_for_referent(search_for_job_application_proof_request, 'attr5_referent')
-     # cred_for_predicate1 = \
-     #     await get_credential_for_referent(search_for_job_application_proof_request, 'predicate1_referent')
-     #
-     # await anoncreds.prover_close_credentials_search_for_proof_req(search_for_job_application_proof_request)
-     #
-     # creds_for_job_application_proof = {cred_for_attr1['referent']: cred_for_attr1,
-     #                                    cred_for_attr2['referent']: cred_for_attr2,
-     #                                    cred_for_attr3['referent']: cred_for_attr3,
-     #                                    cred_for_attr4['referent']: cred_for_attr4,
-     #                                    cred_for_attr5['referent']: cred_for_attr5,
-     #                                    cred_for_predicate1['referent']: cred_for_predicate1}
-     #
-     # schemas_json, cred_defs_json, revoc_states_json = \
-     #     await prover_get_entities_from_ledger(pool_handle, nilo_unb_did, creds_for_job_application_proof, 'nilo')
-     #
-     # logger.info("\"nilo\" -> Create \"Job-Application\" Proof")
-     # job_application_requested_creds_json = json.dumps({
-     #     'self_attested_attributes': {
-     #         'attr1_referent': 'nilo',
-     #         'attr2_referent': 'mendonca',
-     #         'attr6_referent': '123-45-6789'
-     #     },
-     #     'requested_attributes': {
-     #         'attr3_referent': {'cred_id': cred_for_attr3['referent'], 'revealed': True},
-     #         'attr4_referent': {'cred_id': cred_for_attr4['referent'], 'revealed': True},
-     #         'attr5_referent': {'cred_id': cred_for_attr5['referent'], 'revealed': True},
-     #     },
-     #     'requested_predicates': {'predicate1_referent': {'cred_id': cred_for_predicate1['referent']}}
-     # })
-     #
-     # job_application_proof_json = \
-     #     await anoncreds.prover_create_proof(nilo_wallet, authdecrypted_job_application_proof_request_json,
-     #                                         job_application_requested_creds_json, nilo_master_secret_id,
-     #                                         schemas_json, cred_defs_json, revoc_states_json)
-     #
-     # logger.info("\"nilo\" -> Authcrypt \"Job-Application\" Proof for empresax")
-     # authcrypted_job_application_proof_json = await crypto.auth_crypt(nilo_wallet, nilo_empresax_key, empresax_nilo_verkey,
-     #                                                                  job_application_proof_json.encode('utf-8'))
-     #
-     # logger.info("\"nilo\" -> Send authcrypted \"Job-Application\" Proof to empresax")
-     #
-     # logger.info("\"empresax\" -> Authdecrypted \"Job-Application\" Proof from nilo")
-     # _, decrypted_job_application_proof_json, decrypted_job_application_proof = \
-     #     await auth_decrypt(empresax_wallet, empresax_nilo_key, authcrypted_job_application_proof_json)
-     #
-     # schemas_json, cred_defs_json, revoc_ref_defs_json, revoc_regs_json = \
-     #     await verifier_get_entities_from_ledger(pool_handle, empresax_did,
-     #                                             decrypted_job_application_proof['identifiers'], 'empresax')
-     #
-     # logger.info("\"empresax\" -> Verify \"Job-Application\" Proof from nilo")
-     # assert 'bacharelado, engenharia de software' == \
-     #        decrypted_job_application_proof['requested_proof']['revealed_attrs']['attr3_referent']['raw']
-     # assert 'graduacao' == \
-     #        decrypted_job_application_proof['requested_proof']['revealed_attrs']['attr4_referent']['raw']
-     # assert '123-45-6789' == \
-     #        decrypted_job_application_proof['requested_proof']['revealed_attrs']['attr5_referent']['raw']
-     #
-     # assert 'nilo' == decrypted_job_application_proof['requested_proof']['self_attested_attrs']['attr1_referent']
-     # assert 'mendonca' == decrypted_job_application_proof['requested_proof']['self_attested_attrs']['attr2_referent']
-     # assert '123-45-6789' == decrypted_job_application_proof['requested_proof']['self_attested_attrs']['attr6_referent']
-     #
-     # assert await anoncreds.verifier_verify_proof(job_application_proof_request_json,
-     #                                              decrypted_job_application_proof_json,
-     #                                              schemas_json, cred_defs_json, revoc_ref_defs_json, revoc_regs_json)
-     #
-     # logger.info("\"empresax\" -> Create \"Job-Certificate\" Credential Offer for nilo")
-     # job_certificate_cred_offer_json = \
-     #     await anoncreds.issuer_create_credential_offer(empresax_wallet, empresax_job_certificate_cred_def_id)
-     #
-     # logger.info("\"empresax\" -> Get key for nilo did")
-     # nilo_empresax_verkey = await did.key_for_did(pool_handle, empresax_wallet, empresax_nilo_connection_response['did'])
-     #
-     # logger.info("\"empresax\" -> Authcrypt \"Job-Certificate\" Credential Offer for nilo")
-     # authcrypted_job_certificate_cred_offer = await crypto.auth_crypt(empresax_wallet, empresax_nilo_key, nilo_empresax_verkey,
-     #                                                                  job_certificate_cred_offer_json.encode('utf-8'))
-     #
-     # logger.info("\"empresax\" -> Send authcrypted \"Job-Certificate\" Credential Offer to nilo")
-     #
-     # logger.info("\"nilo\" -> Authdecrypted \"Job-Certificate\" Credential Offer from empresax")
-     # empresax_nilo_verkey, authdecrypted_job_certificate_cred_offer_json, authdecrypted_job_certificate_cred_offer = \
-     #     await auth_decrypt(nilo_wallet, nilo_empresax_key, authcrypted_job_certificate_cred_offer)
-     #
-     # logger.info("\"nilo\" -> Get \"empresax Job-Certificate\" Credential Definition from Ledger")
-     # (_, empresax_job_certificate_cred_def) = \
-     #     await get_cred_def(pool_handle, nilo_empresax_did, authdecrypted_job_certificate_cred_offer['cred_def_id'])
-     #
-     # logger.info("\"nilo\" -> Create and store in Wallet \"Job-Certificate\" Credential Request for empresax")
-     # (job_certificate_cred_request_json, job_certificate_cred_request_metadata_json) = \
-     #     await anoncreds.prover_create_credential_req(nilo_wallet, nilo_empresax_did,
-     #                                                  authdecrypted_job_certificate_cred_offer_json,
-     #                                                  empresax_job_certificate_cred_def, nilo_master_secret_id)
-     #
-     # logger.info("\"nilo\" -> Authcrypt \"Job-Certificate\" Credential Request for empresax")
-     # authcrypted_job_certificate_cred_request_json = \
-     #     await crypto.auth_crypt(nilo_wallet, nilo_empresax_key, empresax_nilo_verkey,
-     #                             job_certificate_cred_request_json.encode('utf-8'))
-     #
-     # logger.info("\"nilo\" -> Send authcrypted \"Job-Certificate\" Credential Request to empresax")
-     #
-     # logger.info("\"empresax\" -> Authdecrypt \"Job-Certificate\" Credential Request from nilo")
-     # nilo_empresax_verkey, authdecrypted_job_certificate_cred_request_json, _ = \
-     #     await auth_decrypt(empresax_wallet, empresax_nilo_key, authcrypted_job_certificate_cred_request_json)
-     #
-     # logger.info("\"empresax\" -> Create \"Job-Certificate\" Credential for nilo")
-     # nilo_job_certificate_cred_values_json = json.dumps({
-     #     "first_name": {"raw": "nilo", "encoded": "245712572474217942457235975012103335"},
-     #     "last_name": {"raw": "mendonca", "encoded": "312643218496194691632153761283356127"},
-     #     "employee_status": {"raw": "Permanent", "encoded": "2143135425425143112321314321"},
-     #     "salary": {"raw": "2400", "encoded": "2400"},
-     #     "experience": {"raw": "10", "encoded": "10"}
-     # })
-     #
-     # job_certificate_cred_json, _, _ = \
-     #     await anoncreds.issuer_create_credential(empresax_wallet, job_certificate_cred_offer_json,
-     #                                              authdecrypted_job_certificate_cred_request_json,
-     #                                              nilo_job_certificate_cred_values_json, None, None)
-     #
-     # logger.info("\"empresax\" -> Authcrypt \"Job-Certificate\" Credential for nilo")
-     # authcrypted_job_certificate_cred_json = \
-     #     await crypto.auth_crypt(empresax_wallet, empresax_nilo_key, nilo_empresax_verkey,
-     #                             job_certificate_cred_json.encode('utf-8'))
-     #
-     # logger.info("\"empresax\" -> Send authcrypted \"Job-Certificate\" Credential to nilo")
-     #
-     # logger.info("\"nilo\" -> Authdecrypted \"Job-Certificate\" Credential from empresax")
-     # _, authdecrypted_job_certificate_cred_json, _ = \
-     #     await auth_decrypt(nilo_wallet, nilo_empresax_key, authcrypted_job_certificate_cred_json)
-     #
-     # logger.info("\"nilo\" -> Store \"Job-Certificate\" Credential")
-     # await anoncreds.prover_store_credential(nilo_wallet, None, job_certificate_cred_request_metadata_json,
-     #                                         authdecrypted_job_certificate_cred_json,
-     #                                         empresax_job_certificate_cred_def_json, None)
-     #
-     # input("\n\n\n\n\ncontinuar?")
-     #
-     # logger.info("==============================")
-     # logger.info("== Verificacao das credenciais de trabalho na empresa X ==")
-     # logger.info("------------------------------")
-     #
-     # _, bancoy_nilo_key, nilo_bancoy_did, nilo_bancoy_key, \
-     # bancoy_nilo_connection_response = await onboarding(pool_handle, "bancoy", bancoy_wallet, bancoy_did, "nilo",
-     #                                                     nilo_wallet, nilo_wallet_config, nilo_wallet_credentials)
-     #
+#      transcript_cred_offer_json = \
+#          await anoncreds.issuer_create_credential_offer(org_wallet, org_transcript_cred_def_id)
+#
+#      obj_org_verkey = await did.key_for_did(pool_handle, buss_wallet, org_obj_connection_response['did'])
+#      authcrypted_transcript_cred_offer = await crypto.auth_crypt(org_wallet, org_obj_key, obj_org_verkey,
+#      org_obj_verkey, authdecrypted_transcript_cred_offer_json, authdecrypted_transcript_cred_offer = \
+#          await auth_decrypt(obj_wallet, obj_org_key, authcrypted_transcript_cred_offer)
+#
+#      obj_master_secret_id = await anoncreds.prover_create_master_secret(nilo_wallet, None)
+#
+#      (org_transcript_cred_def_id, org_transcript_cred_def) = \
+#          await get_cred_def(pool_handle, obj_org_did, authdecrypted_transcript_cred_offer['cred_def_id'])
+#
+#      (transcript_cred_request_json, transcript_cred_request_metadata_json) = \
+#          await anoncreds.prover_create_credential_req(obj_wallet, obj_org_did,
+#                                                       authdecrypted_transcript_cred_offer_json,
+#                                                       org_transcript_cred_def, obj_master_secret_id)
+#
+#      authcrypted_transcript_cred_request = await crypto.auth_crypt(obj_wallet, obj_org_key, org_obj_verkey,
+#                                                                    transcript_cred_request_json.encode('utf-8'))
+#
+#      obj_org_verkey, authdecrypted_transcript_cred_request_json, _ = \
+#          await auth_decrypt(org_wallet, org_obj_key, authcrypted_transcript_cred_request)
+#      transcript_cred_values = json.dumps({
+#          "first_name": {"raw": obj_name, "encoded": "1139481716457488690172217916278103335"},
+#          "last_name": {"raw": obj_last_name, "encoded": "5321642780241790123587902456789123452"},
+#          "degree": {"raw": obj_degree, "encoded": "12434523576212321"},
+#          "status": {"raw": obj_states, "encoded": "2213454313412354"},
+#          "ssn": {"raw": obj_ssn, "encoded": "3124141231422543541"},
+#          "year": {"raw": obj_year, "encoded": "2015"},
+#          "average": {"raw": obj_average, "encoded": "5"}
+#      })
+#
+#      transcript_cred_json, _, _ = \
+#          await anoncreds.issuer_create_credential(org_wallet, transcript_cred_offer_json,
+#                                                   authdecrypted_transcript_cred_request_json,
+#                                                   transcript_cred_values, None, None)
+#      authcrypted_transcript_cred_json = await crypto.auth_crypt(org_wallet, org_obj_key, obj_org_verkey,
+#                                                                 transcript_cred_json.encode('utf-8'))
+#
+#      _, authdecrypted_transcript_cred_json, _ = \
+#          await auth_decrypt(obj_wallet, obj_org_key, authcrypted_transcript_cred_json)
+#
+#      await anoncreds.prover_store_credential(obj_wallet, None, transcript_cred_request_metadata_json,
+#                                              authdecrypted_transcript_cred_json, org_transcript_cred_def, None)
+#
+# async def get_proof_request(obj_did, obj_wallet, schema_id):
+#      logger.info("== Verificacao das credenciais de trabalho==")
+#      logger.info("------------------------------")
+#
+#      _, bancoy_nilo_key, nilo_bancoy_did, nilo_bancoy_key, \
+#      bancoy_nilo_connection_response = await onboarding(pool_handle, "bancoy", bancoy_wallet, bancoy_did, "nilo",
+#                                                          nilo_wallet, nilo_wallet_config, nilo_wallet_credentials)
+
+# -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
      # logger.info("\"bancoy\" -> Create \"Loan-Application-Basic\" Proof Request")
      # apply_loan_proof_request_json = json.dumps({
      #     'nonce': '123432421212',
@@ -612,42 +343,6 @@ async def create_schema_definition(obj_did, obj_wallet, schema_id):
      # # assert await anoncreds.verifier_verify_proof(apply_loan_kyc_proof_request_json,
      # #                                              authdecrypted_nilo_apply_loan_kyc_proof_json,
      # #                                              schemas_json, cred_defs_json, revoc_defs_json, revoc_regs_json)
-     #
-     # input("\n\n\n\n\ncontinuar?")
-     #
-     # logger.info("==============================")
-     # logger.info("== exclui as carteiras e encerra a aplicacao ==")
-     # logger.info("==============================")
-     #
-     # logger.info(" \"Admin\" -> Fecha e exclui carteira")
-     # await wallet.close_wallet(admin_wallet)
-     # await wallet.delete_wallet(admin_wallet_config, admin_wallet_credentials)
-     #
-     # logger.info("\"HL7\" -> Close and Delete wallet")
-     # await wallet.close_wallet(HL7_wallet)
-     # await wallet.delete_wallet(HL7_wallet_config, HL7_wallet_credentials)
-     #
-     # logger.info("\"unb\" -> Close and Delete wallet")
-     # await wallet.close_wallet(unb_wallet)
-     # await wallet.delete_wallet(unb_wallet_config, unb_wallet_credentials)
-     #
-     # logger.info("\"empresax\" -> Close and Delete wallet")
-     # await wallet.close_wallet(empresax_wallet)
-     # await wallet.delete_wallet(empresax_wallet_config, empresax_wallet_credentials)
-     #
-     # logger.info("\"bancoy\" -> Close and Delete wallet")
-     # await wallet.close_wallet(bancoy_wallet)
-     # await wallet.delete_wallet(bancoy_wallet_config, bancoy_wallet_credentials)
-     #
-     # logger.info("\"nilo\" -> Close and Delete wallet")
-     # await wallet.close_wallet(nilo_wallet)
-     # await wallet.delete_wallet(nilo_wallet_config, nilo_wallet_credentials)
-     #
-     # logger.info("Close and Delete pool")
-     # await pool.close_pool_ledger(pool_handle)
-     # await pool.delete_pool_ledger_config(pool_name)
-     #
-     # logger.info("Getting started -> done")
 
 
 async def onboarding(pool_handle, _from, from_wallet, from_did, to, to_wallet: Optional[str], to_wallet_config: str,
