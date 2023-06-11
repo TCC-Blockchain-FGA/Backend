@@ -7,6 +7,7 @@ import psycopg2.extras
 from flask_bcrypt import Bcrypt
 import jwt
 import datetime
+import app.controllers.ssi as ssi
 
 SECRET_KEY = "SECRET_KEY"
 
@@ -19,6 +20,19 @@ def get_db_connection():
                             user=os.environ['DB_USERNAME'],
                             password=os.environ['DB_PASSWORD'])
     return conn
+
+def login_org(request):
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    jsonData = request.get_json()
+    if jsonData['login'] != "" and jsonData['password'] != "":
+        cursor.execute("SELECT * FROM organizations WHERE login='" + jsonData['login'] + "'")
+        account = cursor.fetchone()
+        if account[1] == jsonData['login'] and bcrypt.check_password_hash(account[4], jsonData['password']):
+            token = jwt.encode({'login':jsonData['login'], 'exp': datetime.datetime.now() + datetime.timedelta(hours=12)}, SECRET_KEY)
+            return jsonify(login=jsonData['login'],token=token.decode('UTF-8'))
+        return "Bad Request", 400
+    return "Intern Erro", 500
 
 def user_by_login(login):
     conn = get_db_connection()
@@ -41,8 +55,7 @@ def updateRegister(request):
         try:
             cursor.execute("""
                 UPDATE users
-                SET login = '%s',
-                    name = '%s',
+                SET name = '%s',
                     phone = '%s',
                     gender = '%s',
                     dateOfBirth = '%s',
@@ -58,9 +71,9 @@ def updateRegister(request):
                     preferredLanguage = '%s',
                     generalPractitioner = '%s'
                 WHERE id = %s;
-            """%(jsonData['login'], jsonData['name'], jsonData['phone'], jsonData['gender'], jsonData['dateOfBirth'], jsonData['address'], jsonData['maritalStatus'], jsonData['multipleBirth'], jsonData['contactRelationship'], jsonData['contactName'], jsonData['contactPhone'], jsonData['contactAddress'], jsonData['contactGender'], jsonData['languages'], jsonData['preferredLanguage'], jsonData['generalPractitioner'], jsonData['id']))
+            """%(jsonData['name'], jsonData['phone'], jsonData['gender'], jsonData['dateOfBirth'], jsonData['address'], jsonData['maritalStatus'], jsonData['multipleBirth'], jsonData['contactRelationship'], jsonData['contactName'], jsonData['contactPhone'], jsonData['contactAddress'], jsonData['contactGender'], jsonData['languages'], jsonData['preferredLanguage'], jsonData['generalPractitioner'], jsonData['id']))
             conn.commit()
-            return jsonify({'message': 'sucess'}), 200
+            return jsonify({'message': 'success'}), 200
         except:
             return "Intern Erro", 500
     return "Intern Erro", 500
@@ -69,6 +82,7 @@ def register(request):
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     jsonData = request.get_json()
+    wallet = ssi.create_wallet()
     if jsonData['login'] != "" and jsonData['password'] != "":
         try:
             pw_hash = bcrypt.generate_password_hash(jsonData['password']).decode('utf-8')
@@ -90,11 +104,13 @@ def register(request):
                     contactGender,
                     languages,
                     preferredLanguage,
-                    generalPractitioner
-                ) VALUES('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')
-            """%(jsonData['login'], jsonData['name'], jsonData['phone'], pw_hash, jsonData['gender'], jsonData['dateOfBirth'], jsonData['address'], jsonData['maritalStatus'], jsonData['multipleBirth'], jsonData['contactRelationship'], jsonData['contactName'], jsonData['contactPhone'], jsonData['contactAddress'], jsonData['contactGender'], jsonData['languages'], jsonData['preferredLanguage'], jsonData['generalPractitioner']))
+                    generalPractitioner,
+                    walletConfig,
+                    walletCredentials
+                ) VALUES('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')
+            """%(jsonData['login'], jsonData['name'], jsonData['phone'], pw_hash, jsonData['gender'], jsonData['dateOfBirth'], jsonData['address'], jsonData['maritalStatus'], jsonData['multipleBirth'], jsonData['contactRelationship'], jsonData['contactName'], jsonData['contactPhone'], jsonData['contactAddress'], jsonData['contactGender'], jsonData['languages'], jsonData['preferredLanguage'], jsonData['generalPractitioner'], wallet[0], wallet[1]))
             conn.commit()
-            return jsonify({'message': 'sucess'}), 200
+            return jsonify({'message': 'success'}), 200
         except:
             return "Intern Erro", 500
     return "Intern Erro", 500

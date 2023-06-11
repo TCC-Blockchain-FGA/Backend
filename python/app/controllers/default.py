@@ -6,6 +6,8 @@ import jwt
 from flask_cors import CORS, cross_origin
 import app.controllers.database as database
 import app.controllers.ssi as ssi
+import asyncio
+from functools import wraps
 
 ssi.init()
 
@@ -14,6 +16,12 @@ JWTManager(app)
 bcrypt = Bcrypt(app)
 
 SECRET_KEY = "SECRET_KEY"
+
+def async_action(f):
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        return asyncio.run(f(*args, **kwargs))
+    return wrapped
 
 def auth(token):
     jsonData = request.get_json()
@@ -24,8 +32,21 @@ def auth(token):
 @app.route("/", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)
 async def home():
-    await ssi.create_wallet_and_set_trust_anchor("nilo")
     return "OK"
+
+@app.route("/generateCredential", methods=["GET", "POST"])
+@cross_origin(supports_credentials=True)
+@async_action
+async def generateCredential():
+    jsonData = request.get_json()
+    user = database.user_by_login(jsonData['login'])
+    await ssi.generate_credential(user)
+    return "Success", 200
+
+@app.route("/loginOrg", methods=["GET", "POST"])
+@cross_origin(supports_credentials=True)
+def loginOrg():
+    return database.login_org(request)
 
 @app.route("/userData", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)
@@ -33,7 +54,7 @@ def userData():
     user = auth(request)
     if not user:
         return "Bad Request", 400
-    return jsonify({"id": user[0], "login": user[1],"phone": user[2],"name": user[3],"gender": user[5],"dateOfBirth": user[6],"address": user[7],"maritalStatus": user[8],"multipleBirth": user[9],"contactRelationship": user[10],"contactName": user[11],"contactPhone": user[12],"contactAddress": user[13],"contactGender": user[14],"languages": user[15],"preferredLanguage": user[16],"generalPractitioner": user[17]}), 200
+    return jsonify({"id": user[0], "login": user[1],"phone": user[2],"name": user[3],"gender": user[5],"dateOfBirth": user[6],"address": user[7],"maritalStatus": user[8],"multipleBirth": user[9],"contactRelationship": user[10],"contactName": user[11],"contactPhone": user[12],"contactAddress": user[13],"contactGender": user[14],"languages": user[15],"preferredLanguage": user[16],"generalPractitioner": user[17], "walletConfig": user[18], "walletCredentials": user[19]}), 200
 
 @app.route("/login", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)
