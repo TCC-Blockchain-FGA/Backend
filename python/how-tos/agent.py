@@ -262,7 +262,7 @@ class Holder(Agent):
     
     async def store_ver_cred(self, cred_req_metadata_json, cred_json, cred_def_id):
         try:
-            cred_def_json = self.get_cred_def(cred_def_id)
+            cred_def_json = await self.get_cred_def(cred_def_id)
             # 17.
             self.print_log('\n17. Prover processes and stores Credential\n')
             await anoncreds.prover_store_credential(self.wallet, None, cred_req_metadata_json, cred_json, cred_def_json, None)
