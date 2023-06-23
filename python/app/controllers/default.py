@@ -30,18 +30,24 @@ def auth(token):
     return user
 
 @app.route("/", methods=["GET", "POST"])
-@cross_origin(supports_credentials=True)
-async def home():
-    return "OK"
+def home():
+    return "Success"
 
 @app.route("/generateCredential", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)
 @async_action
 async def generateCredential():
+    database.saveCredential(request)
     jsonData = request.get_json()
-    user = database.user_by_login(jsonData['login'])
-    await ssi.generate_credential(user)
+    # user = database.user_by_login(jsonData['did'])
+    # await ssi.generate_credential(user)
     return "Success", 200
+
+@app.route("/getCredentials", methods=["GET", "POST"])
+@cross_origin(supports_credentials=True)
+def getCredentials():
+    jsonData = request.get_json()
+    return jsonify(database.get_credentials(jsonData['email']))
 
 @app.route("/loginOrg", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)
@@ -65,6 +71,12 @@ def login():
 @cross_origin(supports_credentials=True)
 def register():
     return database.register(request)
+
+@app.route("/userByLogin", methods=["GET", "POST"])
+@cross_origin(supports_credentials=True)
+def userByLogin():
+    jsonData = request.get_json()
+    return database.user_by_login(jsonData['login'])
 
 @app.route("/updateRegister", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)

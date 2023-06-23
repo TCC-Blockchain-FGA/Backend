@@ -34,6 +34,30 @@ def login_org(request):
         return "Bad Request", 400
     return "Intern Erro", 500
 
+def saveCredential(request):
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    jsonData = request.get_json()
+    try:
+        cursor.execute("""
+            INSERT INTO credentials(
+                name,
+                type,
+                season,
+                condition,
+                prescription,
+                email,
+                createDate,
+                doctor,
+                squad
+            ) VALUES('%s','%s','%s','%s','%s','%s','%s','%s','%s')
+        """%(jsonData['name'], jsonData['type'], jsonData['season'], jsonData['condition'], jsonData['prescription'], jsonData['email'], jsonData['createDate'], jsonData['doctor'], jsonData['squad']))
+        conn.commit()
+        return jsonify({'message': 'success'}), 200
+    except:
+        return "Intern Erro", 500
+
+
 def user_by_login(login):
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -42,6 +66,23 @@ def user_by_login(login):
         account = cursor.fetchone()
         if account:
             return account
+        return None
+    return None
+
+def get_credentials(email):
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    if email != "":
+        cursor.execute("SELECT * FROM credentials WHERE email='" + email + "'")
+        credentials = cursor.fetchone()
+        if credentials:
+            return credentials
+        return None
+    else:
+        cursor.execute("SELECT * FROM credentials")
+        credentials = cursor.fetchall()
+        if credentials:
+            return credentials
         return None
     return None
 
