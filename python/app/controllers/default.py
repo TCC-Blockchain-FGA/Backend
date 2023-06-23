@@ -76,7 +76,8 @@ def register():
 @cross_origin(supports_credentials=True)
 def userByLogin():
     jsonData = request.get_json()
-    return database.user_by_login(jsonData['login'])
+    user = database.user_by_login(jsonData['login'])
+    return jsonify(user)
 
 @app.route("/updateRegister", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)
