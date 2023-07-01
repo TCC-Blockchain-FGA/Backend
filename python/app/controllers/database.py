@@ -74,7 +74,7 @@ def get_credentials(email):
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     if email != "":
         cursor.execute("SELECT * FROM credentials WHERE email='" + email + "'")
-        credentials = cursor.fetchone()
+        credentials = cursor.fetchall()
         if credentials:
             return credentials
         return None
