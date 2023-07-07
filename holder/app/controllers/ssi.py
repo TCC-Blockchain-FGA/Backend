@@ -12,78 +12,148 @@ import app.controllers.database as database
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-pool_handle = ''
-org_wallet = ''
-org_did = ''
-org_transcript_cred_def_id = ''
+
+from agent import Holder
+
+seq_no = 1
+pool_name = 'pool1'
+pool_genesis_txn_path = get_pool_genesis_txn_path(pool_name)
+pool_config = json.dumps({"genesis_txn": str(pool_genesis_txn_path)})
+
 
 def init():
     run_coroutine(run)
 
-async def run():
-    global pool_handle, org_did, org_wallet, org_transcript_cred_def_id
+def print_log(value_color="", value_noncolor=""):
+    """set the colors for text."""
+    HEADER = '\033[92m'
+    ENDC = '\033[0m'
+    print(HEADER + value_color + ENDC + str(value_noncolor))
 
-    bashCommand = "bash refresh.sh"
-    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-    output, error = process.communicate()
-
-    pool_name = 'pool1'
-    logger.info("Open Pool Ledger: {}".format(pool_name))
-    pool_genesis_txn_path = get_pool_genesis_txn_path(pool_name)
-    pool_config = json.dumps({"genesis_txn": str(pool_genesis_txn_path)})
-    await pool.set_protocol_version(PROTOCOL_VERSION)
-
+async def pool_genesys(protocol_version, pool_name, pool_config):
+    # Set protocol version 2 to work with Indy Node 1.4
     try:
+        bashCommand = "bash refresh.sh"
+        process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+        output, error = process.communicate()
+    except:
+        pass
+    await pool.set_protocol_version(protocol_version)
+    try:
+        # 1.
+        print_log('\n1. Creates a new local pool ledger configuration that is used '
+                  'later when connecting to ledger.\n')
         await pool.create_pool_ledger_config(pool_name, pool_config)
-    except IndyError as ex:
-        if ex.error_code == ErrorCode.PoolLedgerConfigAlreadyExistsError:
-            pass
-    pool_handle = await pool.open_pool_ledger(pool_name, None)
-
-    admin_wallet_config = json.dumps({"id": "admin_wallet"})
-    admin_wallet_credentials = json.dumps({"key": "admin_wallet_key"})
+    except IndyError as e:
+        if e.error_code == ErrorCode.PoolLedgerConfigAlreadyExistsError:
+            print('pool already exists!')
+        else:
+            print('Error occurred: %s' % e)
     try:
-        await wallet.create_wallet(admin_wallet_config, admin_wallet_credentials)
-    except IndyError as ex:
-        if ex.error_code == ErrorCode.WalletAlreadyExistsError:
-            pass
+        # 2.
+        print_log('\n2. Open pool ledger and get handle from libindy\n')
+        pool_handle = await pool.open_pool_ledger(pool_name, None)
+    except IndyError as e:
+        print('Error occurred: %s' % e)
+        pool_handle = -1
+    return pool_handle
 
-    admin_wallet = await wallet.open_wallet(admin_wallet_config, admin_wallet_credentials)
+async def start_holder():
+    pool_handle = await pool_genesys(PROTOCOL_VERSION, pool_name=pool_name, pool_config=pool_config)
+    prover = Holder()
+    await prover.create(pool_handle)
 
-    admin_did_info = {'seed': '000000000000000000000000Steward1'}
-    (admin_did, admin_key) = await did.create_and_store_my_did(admin_wallet, json.dumps(admin_did_info))
+async def issue_credential(prover):
+    
+    ## Issuer handshake DID with Holder
+    connection_request = {
+        'did': from_to_did,
+        'nonce': 123456789
+    }
+    #
+    #cred_offer_json = await issuer.new_cred_offer(cred_def_id)
 
-    org_wallet_config = json.dumps({"id": f'{uuid.uuid4()}'})
-    org_wallet_credentials = json.dumps({"key": f'wallet_key_{uuid.uuid4()}'})
-    org_wallet, admin_org_key, org_admin_did, org_admin_key, _ = \
-         await onboarding(pool_handle, "Sovrin Steward", admin_wallet, admin_did, "org", None, org_wallet_config, org_wallet_credentials)
-    org_did = await get_verinym(pool_handle, "Sovrin Steward", admin_wallet, admin_did, admin_org_key, "org", org_wallet, org_admin_did, org_admin_key, 'TRUST_ANCHOR')
+    ## Issuer Crypt
+    ## Issuer send message to holder with (cred_offer_json, cred_def_id)
+    # o cred_def_id ja esta dentro do cred_offer_json
+    ## Holder Decrypt 
 
-    (org_certificate_schema_id, org_certificate_schema) = \
-         await anoncreds.issuer_create_schema(org_did, 'Job-Certificate', '0.2',
-                                              json.dumps(['first_name', 'last_name', 'salary', 'employee_status',
-                                                          'experience']))
 
-    await send_schema(pool_handle, org_wallet, org_did, org_certificate_schema)
+    (cred_req_json, cred_req_metadata_json) = await prover.offer_to_cred_request(cred_offer_json, cred_def_id)
 
-    (transcript_schema_id, transcript_schema) = \
-        await anoncreds.issuer_create_schema(admin_did, 'Transcript', '1.2',
-                                             json.dumps(['first_name', 'last_name', 'degree', 'status',
-                                                         'year', 'average', 'ssn']))
-    await send_schema(pool_handle, admin_wallet, admin_did, transcript_schema)
+    ## falta fazer o encoded automatico
+    cred_values_json = json.dumps({
+        'name': {'raw': 'matheus', 'encoded': '12345'}, 'phone': {'raw': '61912341234', 'encoded': '12345'}, 'gender': {'raw': 'm', 'encoded': '12345'}, \
+        'dateOfBirth': {'raw': '01011999', 'encoded': '12345'}, 'address':{'raw': 'Brasilia', 'encoded': '12345'}, 'maritalStatus': {'raw': 'abc', 'encoded': '12345'}, \
+        'multipleBirth': {'raw': '0', 'encoded': '12345'}, 'contactRelationship': {'raw': 'a', 'encoded': '12345'}, 'contactName': {'raw': 'mamama', 'encoded': '12345'}, \
+        'contactPhone': {'raw': '61901011010', 'encoded': '12345'}, 'contactAddress': {'raw': 'Brasilia', 'encoded': '12345'}, 'contactGender': {'raw': 'm', 'encoded': '12345'}, \
+        'languages': {'raw': 'pt', 'encoded': '12345'}, 'preferredLanguage': {'raw': 'pt', 'encoded': '12345'}, 'generalPractitioner': {'raw': 'abccba', 'encoded': '12345'},
+    })
 
-    time.sleep(1)
-    (_, transcript_schema) = await get_schema(pool_handle, org_did, transcript_schema_id)
-    (org_transcript_cred_def_id, org_transcript_cred_def_json) = \
-        await anoncreds.issuer_create_and_store_credential_def(org_wallet, org_did, transcript_schema,
-                                                               'TAG1', 'CL', '{"support_revocation": false}')
 
-    await send_cred_def(pool_handle, org_wallet, org_did, org_transcript_cred_def_json)
 
-def create_wallet():
-    wallet_config = json.dumps({"id": f'{uuid.uuid4()}'})
-    wallet_credentials = json.dumps({"key": f'wallet_key_{uuid.uuid4()}'})
-    return [wallet_config, wallet_credentials]
+    ## Holder Crypt
+    ## Holder send message to Issuer with (cred_req_json, cred_values_json)
+    ## Issuer Decrypt
+
+    #
+    #cred_json = await issuer.request_to_cred_issue(cred_offer_json, cred_req_json, cred_values_json)
+
+    ## Issuer Crypt
+    ## Issuer send message to Holder with (cred_json)
+    ## Holder Decrypt
+
+    await prover.store_ver_cred(cred_req_metadata_json, cred_json, cred_def_id)
+
+
+async def validate_credential(prover):
+
+    ## Validator handshake DID with Holder
+    
+    #
+    #proof_req = validator.build_proof_request('gvt', '', '')
+
+    ## Validator crypt
+    ## Validator send message to Holder with (proof_req)
+    ## Holder decrypt
+
+    ## falta buscar esses schemas e cred_defs sozinho no ledger (desaclopar)
+    proof_json, schemas_json, cred_defs_json = await prover.proof_req_to_get_cred(proof_req, schema_id, cred_def_id)
+    
+    ## Holder crypt
+    ## Holder send message to Validator with (proof_req)
+    ## Validator decrypt
+
+    #
+    #assert await validator.validate_proof(proof_req, proof_json, schemas_json, cred_defs_json, '{}')
+
+    ###
+
+async def delete_and_close(prover, pool_handle):
+
+    await prover.delete()    
+
+    try:
+        # 20.
+        print_log('\n20. Close and Deleting pool ledger config\n')
+        await pool.close_pool_ledger(pool_handle)
+        await pool.delete_pool_ledger_config(pool_name)
+    except IndyError as e:
+            print('Error occurred: %s' % e)
+    
+
+
+
+
+
+async def run():
+    pool_handle = await pool_genesys(PROTOCOL_VERSION, pool_name=pool_name, pool_config=pool_config)
+    prover = Holder()
+    await prover.create(pool_handle)
+    issue_credential(prover)
+    validate_credential(prover)
+    delete_and_close(prover, pool_handle)
+
 
 async def generate_credential(user):
     user_wallet_config = user[18]

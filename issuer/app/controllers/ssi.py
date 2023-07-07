@@ -10,6 +10,167 @@ import subprocess
 import uuid
 import app.controllers.database as database
 
+
+import asyncio
+import json
+import pprint
+import sys
+from typing import Optional
+
+from src.utils import run_coroutine, get_pool_genesis_txn_path, PROTOCOL_VERSION
+
+from indy import pool, ledger, wallet, did, anoncreds, crypto
+from indy.error import IndyError, ErrorCode
+
+from agent import Steward, Issuer, Holder, Validator
+
+seq_no = 1
+pool_name = 'pool'
+wallet_credentials = json.dumps({"key": "wallet_key"})
+steward_wallet_config = json.dumps({"id": "steward_wallet"})
+issuer_wallet_config = json.dumps({"id": "issuer_wallet"})
+pool_genesis_txn_path = get_pool_genesis_txn_path(pool_name)
+pool_config = json.dumps({"genesis_txn": str(pool_genesis_txn_path)})
+
+
+def print_log(value_color="", value_noncolor=""):
+    """set the colors for text."""
+    HEADER = '\033[92m'
+    ENDC = '\033[0m'
+    print(HEADER + value_color + ENDC + str(value_noncolor))
+
+async def pool_genesys(protocol_version, pool_name, pool_config):
+    # Set protocol version 2 to work with Indy Node 1.4
+    try:
+        bashCommand = "bash refresh.sh"
+        process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+        output, error = process.communicate()
+    except:
+        pass
+    await pool.set_protocol_version(protocol_version)
+    try:
+        # 1.
+        print_log('\n1. Creates a new local pool ledger configuration that is used '
+                  'later when connecting to ledger.\n')
+        await pool.create_pool_ledger_config(pool_name, pool_config)
+    except IndyError as e:
+        if e.error_code == ErrorCode.PoolLedgerConfigAlreadyExistsError:
+            print('pool already exists!')
+        else:
+            print('Error occurred: %s' % e)
+    try:
+        # 2.
+        print_log('\n2. Open pool ledger and get handle from libindy\n')
+        pool_handle = await pool.open_pool_ledger(pool_name, None)
+    except IndyError as e:
+        print('Error occurred: %s' % e)
+        pool_handle = -1
+    return pool_handle
+
+async def start_issuer():
+    pool_handle = await pool_genesys(PROTOCOL_VERSION, pool_name=pool_name, pool_config=pool_config)
+    steward = Steward()
+    issuer = Issuer()
+    validator = Validator()
+    await steward.create(pool_handle)
+    await issuer.create(pool_handle)
+    await validator.create(pool_handle)
+
+
+    await steward.simple_onboarding(issuer.did, issuer.verkey, issuer.role)
+    await steward.simple_onboarding(validator.did, validator.verkey, validator.role)
+
+    schema_id = await steward.new_schema('RegistroPaciente',  
+                    ['name', 'phone', 'gender', \
+                    'dateOfBirth', 'address', 'maritalStatus', \
+                    'multipleBirth', 'contactRelationship', 'contactName', \
+                    'contactPhone', 'contactAddress', 'contactGender', \
+                    'languages', 'preferredLanguage', 'generalPractitioner',])
+    
+
+    cred_def_id = await issuer.new_cred_def(schema_id)
+
+async def issue_credential():
+    ## Issuer handshake DID with Holder
+
+    cred_offer_json = await issuer.new_cred_offer(cred_def_id)
+
+    ## Issuer Crypt
+    ## Issuer send message to holder with (cred_offer_json, cred_def_id)
+    # o cred_def_id ja esta dentro do cred_offer_json
+    ## Holder Decrypt 
+
+
+    ### Holder<
+
+    #prover = Holder()
+    #await prover.create(pool_handle)
+    #(cred_req_json, cred_req_metadata_json) = await prover.offer_to_cred_request(cred_offer_json, cred_def_id)
+
+    ## falta fazer o encoded automatico
+    #cred_values_json = json.dumps({
+    #    'name': {'raw': 'matheus', 'encoded': '12345'}, 'phone': {'raw': '61912341234', 'encoded': '12345'}, 'gender': {'raw': 'm', 'encoded': '12345'}, \
+    #    'dateOfBirth': {'raw': '01011999', 'encoded': '12345'}, 'address':{'raw': 'Brasilia', 'encoded': '12345'}, 'maritalStatus': {'raw': 'abc', 'encoded': '12345'}, \
+    #    'multipleBirth': {'raw': '0', 'encoded': '12345'}, 'contactRelationship': {'raw': 'a', 'encoded': '12345'}, 'contactName': {'raw': 'mamama', 'encoded': '12345'}, \
+    #    'contactPhone': {'raw': '61901011010', 'encoded': '12345'}, 'contactAddress': {'raw': 'Brasilia', 'encoded': '12345'}, 'contactGender': {'raw': 'm', 'encoded': '12345'}, \
+    #    'languages': {'raw': 'pt', 'encoded': '12345'}, 'preferredLanguage': {'raw': 'pt', 'encoded': '12345'}, 'generalPractitioner': {'raw': 'abccba', 'encoded': '12345'},
+    #})
+
+
+    ### Holder>
+
+    ## Holder Crypt
+    ## Holder send message to Issuer with (cred_req_json, cred_values_json)
+    ## Issuer Decrypt
+
+
+    cred_json = await issuer.request_to_cred_issue(cred_offer_json, cred_req_json, cred_values_json)
+
+    ## Issuer Crypt
+    ## Issuer send message to Holder with (cred_json)
+    ## Holder Decrypt
+
+    ### Holder<
+
+    #await prover.store_ver_cred(cred_req_metadata_json, cred_json, cred_def_id)
+
+    ### Holder>
+
+async def validate_credential(prover):
+    ## Validator handshake DID with Holder
+    proof_req = validator.build_proof_request('gvt', '', '')
+
+    ## Validator crypt
+    ## Validator send message to Holder with (proof_req)
+    ## Holder decrypt
+
+    ## falta buscar esses schemas e cred_defs sozinho no ledger (desaclopar)
+    #proof_json, schemas_json, cred_defs_json = await prover.proof_req_to_get_cred(proof_req, schema_id, cred_def_id)
+    
+    ## Holder crypt
+    ## Holder send message to Validator with (proof_req)
+    ## Validator decrypt
+
+    assert await validator.validate_proof(proof_req, proof_json, schemas_json, cred_defs_json, '{}')
+
+    ###
+
+async def delete_and_close(prover, pool_handle):
+
+    await issuer.delete()    
+    #await prover.delete()    
+    await validator.delete()    
+
+    try:
+        # 20.
+        print_log('\n20. Close and Deleting pool ledger config\n')
+        await pool.close_pool_ledger(pool_handle)
+        await pool.delete_pool_ledger_config(pool_name)
+    except IndyError as e:
+            print('Error occurred: %s' % e)
+    
+
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 pool_handle = ''

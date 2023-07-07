@@ -2,9 +2,11 @@ from indy import pool, ledger, wallet, did, anoncreds, crypto
 from indy.error import IndyError, ErrorCode
 from typing import Optional
 import json
+import uuid
 from enum import Enum
 import pprint
 import asyncio
+import requests
 
 class Roles(Enum):
     USER = None
@@ -19,11 +21,10 @@ class Agent:
     def __init__(self) -> None:
         pass
 
-    async def createAgent(self, pool_handle, wallet_config, wallet_credentials):
+    async def createAgent(self, pool_handle):
         self.pool = pool_handle
-        self.wallet_config = wallet_config
-        self.wallet_credentials = wallet_credentials
-        self.wallet = await self.new_wallet(wallet_config, wallet_credentials)
+        self.wallet_config, self.wallet_credentials = self.create_wallet()
+        self.wallet = await self.new_wallet(self.wallet_config, self.wallet_credentials)
         
 
     async def new_wallet(self, wallet_config, wallet_credentials):
@@ -51,6 +52,11 @@ class Agent:
             print('Error occurred: %s' % e)
         return _did, _verkey
     
+    def create_wallet():
+        wallet_config = json.dumps({"id": f'{uuid.uuid4()}'})
+        wallet_credentials = json.dumps({"key": f'wallet_key_{uuid.uuid4()}'})
+        return [wallet_config, wallet_credentials]
+
     async def open_wallet(self):
         try:
             self.print_log('\n4. Open wallet and get handle from libindy\n')
@@ -69,6 +75,41 @@ class Agent:
         except IndyError as e:
                 print('Error occurred: %s' % e)
 
+    async def connect_did(self, connection_request):
+        ##recv this request
+
+        self.print_log('\n Get key for did from other Peer connection request\n')
+
+        to_verkey = await did.key_for_did(self.pool, self.wallet, connection_request['did'])
+
+        self.print_log('\n Anoncrypt connection response for Holder with Peer DID, verkey and nonce\n')
+                    
+        connection_response = json.dumps({
+            'did': self.did,
+            'verkey': self.verkey,
+            'nonce': connection_request['nonce']
+        })
+
+        ##send this response 
+        await self.send_message_ab(connection_response.encode('utf-8'), to_verkey)
+
+    async def send_message_ab(self, message, to_verkey):
+        crypted_message = await crypto.pack_message(self.wallet, message, [to_verkey], self.verkey)
+        return crypted_message
+    async def recv_message_ba(self, crypted_message):
+        """
+        (Authcrypt mode)
+
+        {
+            "message": <decrypted message>,
+            "recipient_verkey": <recipient verkey used to decrypt>,
+            "sender_verkey": <sender verkey used to encrypt>
+        }
+
+        """
+        message = await crypto.unpack_message(self.wallet, crypted_message)
+        return message
+    
     async def delete(self):
         try:
             # 18.
@@ -89,8 +130,8 @@ class Steward(Agent):
     def __init__(self) -> None:
         super().__init__()
         pass
-    async def create(self, pool_handle, wallet_config, wallet_credentials):
-        await self.createAgent(pool_handle, wallet_config, wallet_credentials)
+    async def create(self, pool_handle):
+        await self.createAgent(pool_handle)
         self.role = 'STEWARD'
         self.print_log('\n5. Generating and storing steward DID and verkey\n')
         steward_seed = '000000000000000000000000Steward1'
@@ -154,8 +195,8 @@ class Issuer(Agent):
         super().__init__()
         pass
 
-    async def create(self, pool_handle, wallet_config, wallet_credentials):
-        await self.createAgent(pool_handle, wallet_config, wallet_credentials)
+    async def create(self, pool_handle):
+        await self.createAgent(pool_handle)
         self.role = 'TRUST_ANCHOR'
         self.print_log(
             '\n6. Generating and storing trust anchor (also issuer) DID and verkey\n')
@@ -225,8 +266,8 @@ class Holder(Agent):
         super().__init__()
         pass
 
-    async def create(self, pool_handle, wallet_config, wallet_credentials):
-        await self.createAgent(pool_handle, wallet_config, wallet_credentials)
+    async def create(self, pool_handle):
+        await self.createAgent(pool_handle)
         self.did, self.verkey = await self.generate_did("{}")
         self.role = None
         try:
@@ -317,9 +358,9 @@ class Validator(Agent):
         pass
 
 
-    async def create(self, pool_handle, wallet_config, wallet_credentials):
+    async def create(self, pool_handle):
         try:
-            await self.createAgent(pool_handle, wallet_config, wallet_credentials)
+            await self.createAgent(pool_handle)
             self.did, self.verkey = await self.generate_did("{}")
             self.role = 'ENDORSER'
 
