@@ -8,6 +8,7 @@ import app.controllers.database as database
 import app.controllers.ssi as ssi
 import asyncio
 from functools import wraps
+import requests
 
 ssi.init()
 
@@ -28,6 +29,30 @@ def auth(token):
     data = jwt.decode(jsonData['token'], SECRET_KEY)
     user = database.user_by_login(data['login'])
     return user
+
+@app.route("/testRequestsSend", methods=["GET", "POST"])
+def testRequestsSend():
+    # GET
+    URL = "https://localhost:5001/testRequestsReceiver"
+    location = "Teste"
+    PARAMS = {'data': location}
+    r = requests.get(url = URL, params = PARAMS, verify=False)
+    print(r)
+
+    # POST
+    API_ENDPOINT = "https://localhost:5000/testRequestsReceiver"
+    data = {'api_dev_key':'API_KEY',
+            'api_option':'paste',
+            'api_paste_code':'source_code',
+            'api_paste_format':'python'}
+    r = requests.post(url = API_ENDPOINT, data = data, verify=False)
+    print(r)
+    return "Success"
+
+@app.route("/testRequestsReceiver", methods=["GET", "POST"])
+def testRequestsReceiver():
+    print("\n\n\n\n\n\n\n\n\n\n\nRequisição recebida\n\n\n\n\n\n\n\n\n\n")
+    return "Success"
 
 @app.route("/", methods=["GET", "POST"])
 def home():

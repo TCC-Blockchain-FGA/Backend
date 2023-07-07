@@ -10,3 +10,4 @@ flask-bcrypt==1.0.1
 markupsafe==2.0.1
 PyJWT==1.6.4
 pyopenssl
+requests

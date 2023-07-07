@@ -22,7 +22,7 @@ from src.utils import run_coroutine, get_pool_genesis_txn_path, PROTOCOL_VERSION
 from indy import pool, ledger, wallet, did, anoncreds, crypto
 from indy.error import IndyError, ErrorCode
 
-from agent import Steward, Issuer, Holder, Validator
+from app.controllers.agent import Steward, Issuer, Holder, Validator
 
 seq_no = 1
 pool_name = 'pool'
@@ -80,13 +80,13 @@ async def start_issuer():
     await steward.simple_onboarding(issuer.did, issuer.verkey, issuer.role)
     await steward.simple_onboarding(validator.did, validator.verkey, validator.role)
 
-    schema_id = await steward.new_schema('RegistroPaciente',  
+    schema_id = await steward.new_schema('RegistroPaciente',
                     ['name', 'phone', 'gender', \
                     'dateOfBirth', 'address', 'maritalStatus', \
                     'multipleBirth', 'contactRelationship', 'contactName', \
                     'contactPhone', 'contactAddress', 'contactGender', \
                     'languages', 'preferredLanguage', 'generalPractitioner',])
-    
+
 
     cred_def_id = await issuer.new_cred_def(schema_id)
 
@@ -98,7 +98,7 @@ async def issue_credential():
     ## Issuer Crypt
     ## Issuer send message to holder with (cred_offer_json, cred_def_id)
     # o cred_def_id ja esta dentro do cred_offer_json
-    ## Holder Decrypt 
+    ## Holder Decrypt
 
 
     ### Holder<
@@ -146,7 +146,7 @@ async def validate_credential(prover):
 
     ## falta buscar esses schemas e cred_defs sozinho no ledger (desaclopar)
     #proof_json, schemas_json, cred_defs_json = await prover.proof_req_to_get_cred(proof_req, schema_id, cred_def_id)
-    
+
     ## Holder crypt
     ## Holder send message to Validator with (proof_req)
     ## Validator decrypt
@@ -157,9 +157,9 @@ async def validate_credential(prover):
 
 async def delete_and_close(prover, pool_handle):
 
-    await issuer.delete()    
-    #await prover.delete()    
-    await validator.delete()    
+    await issuer.delete()
+    #await prover.delete()
+    await validator.delete()
 
     try:
         # 20.
@@ -168,7 +168,7 @@ async def delete_and_close(prover, pool_handle):
         await pool.delete_pool_ledger_config(pool_name)
     except IndyError as e:
             print('Error occurred: %s' % e)
-    
+
 
 
 logger = logging.getLogger(__name__)

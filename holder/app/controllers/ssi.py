@@ -13,7 +13,7 @@ import app.controllers.database as database
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-from agent import Holder
+from app.controllers.agent import Holder
 
 seq_no = 1
 pool_name = 'pool1'
@@ -64,7 +64,7 @@ async def start_holder():
     await prover.create(pool_handle)
 
 async def issue_credential(prover):
-    
+
     ## Issuer handshake DID with Holder
     connection_request = {
         'did': from_to_did,
@@ -76,7 +76,7 @@ async def issue_credential(prover):
     ## Issuer Crypt
     ## Issuer send message to holder with (cred_offer_json, cred_def_id)
     # o cred_def_id ja esta dentro do cred_offer_json
-    ## Holder Decrypt 
+    ## Holder Decrypt
 
 
     (cred_req_json, cred_req_metadata_json) = await prover.offer_to_cred_request(cred_offer_json, cred_def_id)
@@ -109,7 +109,7 @@ async def issue_credential(prover):
 async def validate_credential(prover):
 
     ## Validator handshake DID with Holder
-    
+
     #
     #proof_req = validator.build_proof_request('gvt', '', '')
 
@@ -119,7 +119,7 @@ async def validate_credential(prover):
 
     ## falta buscar esses schemas e cred_defs sozinho no ledger (desaclopar)
     proof_json, schemas_json, cred_defs_json = await prover.proof_req_to_get_cred(proof_req, schema_id, cred_def_id)
-    
+
     ## Holder crypt
     ## Holder send message to Validator with (proof_req)
     ## Validator decrypt
@@ -131,7 +131,7 @@ async def validate_credential(prover):
 
 async def delete_and_close(prover, pool_handle):
 
-    await prover.delete()    
+    await prover.delete()
 
     try:
         # 20.
@@ -140,7 +140,7 @@ async def delete_and_close(prover, pool_handle):
         await pool.delete_pool_ledger_config(pool_name)
     except IndyError as e:
             print('Error occurred: %s' % e)
-    
+
 
 
 
@@ -149,7 +149,7 @@ async def delete_and_close(prover, pool_handle):
 async def run():
     pool_handle = await pool_genesys(PROTOCOL_VERSION, pool_name=pool_name, pool_config=pool_config)
     prover = Holder()
-    await prover.create(pool_handle)
+    # await prover.create(pool_handle)
     issue_credential(prover)
     validate_credential(prover)
     delete_and_close(prover, pool_handle)
