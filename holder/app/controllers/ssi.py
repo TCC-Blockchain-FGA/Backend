@@ -19,6 +19,7 @@ seq_no = 1
 pool_name = 'pool1'
 pool_genesis_txn_path = get_pool_genesis_txn_path(pool_name)
 pool_config = json.dumps({"genesis_txn": str(pool_genesis_txn_path)})
+prover = Holder()
 
 
 def init():
@@ -60,37 +61,35 @@ async def pool_genesys(protocol_version, pool_name, pool_config):
 
 async def start_holder():
     pool_handle = await pool_genesys(PROTOCOL_VERSION, pool_name=pool_name, pool_config=pool_config)
-    prover = Holder()
     await prover.create(pool_handle)
 
-async def issue_credential(prover):
+async def issue_credential(connection_request, step):
 
-    ## Issuer handshake DID with Holder
-    connection_request = {
-        'did': from_to_did,
-        'nonce': 123456789
-    }
-    #
-    #cred_offer_json = await issuer.new_cred_offer(cred_def_id)
+    if step == 1:
+        return prover.connect_did(connection_request)
+        
+        #cred_offer_json = await issuer.new_cred_offer(cred_def_id)
 
-    ## Issuer Crypt
-    ## Issuer send message to holder with (cred_offer_json, cred_def_id)
-    # o cred_def_id ja esta dentro do cred_offer_json
-    ## Holder Decrypt
+        ## Issuer Crypt
+        ## Issuer send message to holder with (cred_offer_json, cred_def_id)
+        # o cred_def_id ja esta dentro do cred_offer_json
+        ## Holder Decrypt
 
+    if step == 2:
+        message = json.loads(prover.recv_message_ba(connection_request))
+        (cred_req_json, cred_req_metadata_json) = await prover.offer_to_cred_request(message['cred_offer_json'], message['cred_def_id'])
 
-    (cred_req_json, cred_req_metadata_json) = await prover.offer_to_cred_request(cred_offer_json, cred_def_id)
+        #### precisa parar e fazer o cadastro do forms
 
-    ## falta fazer o encoded automatico
-    cred_values_json = json.dumps({
-        'name': {'raw': 'matheus', 'encoded': '12345'}, 'phone': {'raw': '61912341234', 'encoded': '12345'}, 'gender': {'raw': 'm', 'encoded': '12345'}, \
-        'dateOfBirth': {'raw': '01011999', 'encoded': '12345'}, 'address':{'raw': 'Brasilia', 'encoded': '12345'}, 'maritalStatus': {'raw': 'abc', 'encoded': '12345'}, \
-        'multipleBirth': {'raw': '0', 'encoded': '12345'}, 'contactRelationship': {'raw': 'a', 'encoded': '12345'}, 'contactName': {'raw': 'mamama', 'encoded': '12345'}, \
-        'contactPhone': {'raw': '61901011010', 'encoded': '12345'}, 'contactAddress': {'raw': 'Brasilia', 'encoded': '12345'}, 'contactGender': {'raw': 'm', 'encoded': '12345'}, \
-        'languages': {'raw': 'pt', 'encoded': '12345'}, 'preferredLanguage': {'raw': 'pt', 'encoded': '12345'}, 'generalPractitioner': {'raw': 'abccba', 'encoded': '12345'},
-    })
-
-
+        ## falta fazer o encoded automatico
+        cred_values_json = json.dumps({
+            'name': {'raw': 'matheus', 'encoded': '12345'}, 'phone': {'raw': '61912341234', 'encoded': '12345'}, 'gender': {'raw': 'm', 'encoded': '12345'}, \
+            'dateOfBirth': {'raw': '19990101', 'encoded': '12345'}, 'address':{'raw': 'Brasilia', 'encoded': '12345'}, 'maritalStatus': {'raw': 'abc', 'encoded': '12345'}, \
+            'multipleBirth': {'raw': '0', 'encoded': '12345'}, 'contactRelationship': {'raw': 'a', 'encoded': '12345'}, 'contactName': {'raw': 'mamama', 'encoded': '12345'}, \
+            'contactPhone': {'raw': '61901011010', 'encoded': '12345'}, 'contactAddress': {'raw': 'Brasilia', 'encoded': '12345'}, 'contactGender': {'raw': 'm', 'encoded': '12345'}, \
+            'languages': {'raw': 'pt', 'encoded': '12345'}, 'preferredLanguage': {'raw': 'pt', 'encoded': '12345'}, 'generalPractitioner': {'raw': 'abccba', 'encoded': '12345'},
+        })
+        return await prover.send_message_ab(json.dumps({'cred_req_json': cred_req_json, 'cred_values_json': cred_values_json}), prover.issuer_verkey)
 
     ## Holder Crypt
     ## Holder send message to Issuer with (cred_req_json, cred_values_json)
@@ -98,15 +97,17 @@ async def issue_credential(prover):
 
     #
     #cred_json = await issuer.request_to_cred_issue(cred_offer_json, cred_req_json, cred_values_json)
-
+    if step == 3:
+        message = json.loads(prover.recv_message_ba(connection_request))
+        
     ## Issuer Crypt
-    ## Issuer send message to Holder with (cred_json)
+    ## Issuer send message to Holder with (cred_json, cred_def_id)
     ## Holder Decrypt
 
-    await prover.store_ver_cred(cred_req_metadata_json, cred_json, cred_def_id)
+        await prover.store_ver_cred(cred_req_metadata_json, message['cred_json'], message['cred_def_id'])
+        return 'Success'
 
-
-async def validate_credential(prover):
+async def validate_credential(c_message):
 
     ## Validator handshake DID with Holder
 
@@ -117,9 +118,13 @@ async def validate_credential(prover):
     ## Validator send message to Holder with (proof_req)
     ## Holder decrypt
 
-    ## falta buscar esses schemas e cred_defs sozinho no ledger (desaclopar)
-    proof_json, schemas_json, cred_defs_json = await prover.proof_req_to_get_cred(proof_req, schema_id, cred_def_id)
+    message = json.loads(prover.recv_message_ba(c_message))
 
+
+    ## falta buscar esses schemas e cred_defs sozinho no ledger (desaclopar)
+    proof_json, schemas_json, cred_defs_json = await prover.proof_req_to_get_cred(message['proof_req'], message['schema_id'], message['cred_def_id'])
+
+    return await prover.send_message_ab(json.dumps({'proof_json': proof_json, 'schemas_json': schemas_json, 'cred_defs_json': cred_defs_json}), prover.issuer_verkey)
     ## Holder crypt
     ## Holder send message to Validator with (proof_req)
     ## Validator decrypt
@@ -147,12 +152,10 @@ async def delete_and_close(prover, pool_handle):
 
 
 async def run():
-    pool_handle = await pool_genesys(PROTOCOL_VERSION, pool_name=pool_name, pool_config=pool_config)
-    prover = Holder()
-    # await prover.create(pool_handle)
-    issue_credential(prover)
-    validate_credential(prover)
-    delete_and_close(prover, pool_handle)
+    start_holder()
+    # issue_credential(prover)
+    # validate_credential(prover)
+    # delete_and_close(prover, pool_handle)
 
 
 async def generate_credential(user):

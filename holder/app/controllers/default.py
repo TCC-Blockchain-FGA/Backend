@@ -53,7 +53,13 @@ def testRequestsSend():
 @app.route("/testRequestsReceiver", methods=["GET", "POST"])
 def testRequestsReceiver():
     print("\n\n\n\n\n\n\n\n\n\n\nRequisição recebida\n\n\n\n\n\n\n\n\n\n")
-    return "Success"
+    return ssi.issue_credential(request.args.get('data'), request.args.get('step'))
+
+@app.route("/testRequestsReceiver2", methods=["GET", "POST"])
+def testRequestsReceiver2():
+    print("\n\n\n\n\n\n\n\n\n\n\nRequisição recebida\n\n\n\n\n\n\n\n\n\n")
+    return ssi.validate_credential(request.args.get('data'))
+
 
 @app.route("/", methods=["GET", "POST"])
 def home():

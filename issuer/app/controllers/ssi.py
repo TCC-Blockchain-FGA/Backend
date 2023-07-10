@@ -25,13 +25,15 @@ from indy.error import IndyError, ErrorCode
 from app.controllers.agent import Steward, Issuer, Holder, Validator
 
 seq_no = 1
-pool_name = 'pool'
-wallet_credentials = json.dumps({"key": "wallet_key"})
-steward_wallet_config = json.dumps({"id": "steward_wallet"})
-issuer_wallet_config = json.dumps({"id": "issuer_wallet"})
+pool_name = 'pool1'
 pool_genesis_txn_path = get_pool_genesis_txn_path(pool_name)
 pool_config = json.dumps({"genesis_txn": str(pool_genesis_txn_path)})
 
+steward = Steward()
+issuer = Issuer()
+validator = Validator()
+pool_handle = ''
+holder_verkey = ''
 
 def print_log(value_color="", value_noncolor=""):
     """set the colors for text."""
@@ -69,9 +71,7 @@ async def pool_genesys(protocol_version, pool_name, pool_config):
 
 async def start_issuer():
     pool_handle = await pool_genesys(PROTOCOL_VERSION, pool_name=pool_name, pool_config=pool_config)
-    steward = Steward()
-    issuer = Issuer()
-    validator = Validator()
+    
     await steward.create(pool_handle)
     await issuer.create(pool_handle)
     await validator.create(pool_handle)
@@ -88,13 +88,37 @@ async def start_issuer():
                     'languages', 'preferredLanguage', 'generalPractitioner',])
 
 
-    cred_def_id = await issuer.new_cred_def(schema_id)
+    await issuer.new_cred_def(schema_id)
 
 async def issue_credential():
     ## Issuer handshake DID with Holder
+    connection_request = {
+        'did': issuer.did,
+        'nonce': hash(issuer.did)
+    }
+    c_message = await issuer.send_message_ab(connection_request, None)
 
-    cred_offer_json = await issuer.new_cred_offer(cred_def_id)
+    URL = "https://localhost:5001/testRequestsReceiver"
+    location = "Teste"
+    PARAMS = {'data': c_message, 'step': 1}
+    c_res = requests.get(url = URL, params = PARAMS, verify=False)
+    jres = await issuer.recv_message_ba(c_res)
+    res = json.loads(jres)
+    print(res)
+    holder_did = res['did']
+    holder_verkey = res['verkey']
+    cred_offer_json = await issuer.new_cred_offer(issuer.cred_defs['RegistroPaciente'])
 
+    c_message = await issuer.send_message_ab(json.dumps({'cred_offer_json': cred_offer_json, 'cred_def_id': issuer.cred_defs['RegistroPaciente']}), holder_verkey)
+
+    URL = "https://localhost:5001/testRequestsReceiver"
+    location = "Teste"
+    PARAMS = {'data': c_message, 'step': 2}
+    c_res = requests.get(url = URL, params = PARAMS, verify=False)
+    jres = await issuer.recv_message_ba(c_res)
+    res = json.loads(jres)
+    cred_req_json = res['cred_req_json'] 
+    cred_values_json = res['cred_values_json']
     ## Issuer Crypt
     ## Issuer send message to holder with (cred_offer_json, cred_def_id)
     # o cred_def_id ja esta dentro do cred_offer_json
@@ -126,8 +150,14 @@ async def issue_credential():
 
     cred_json = await issuer.request_to_cred_issue(cred_offer_json, cred_req_json, cred_values_json)
 
+    c_message = await issuer.send_message_ab(json.dumps({'cred_json': cred_json, 'cred_def_id': issuer.cred_defs['RegistroPaciente']}), holder_verkey)
+    URL = "https://localhost:5001/testRequestsReceiver"
+    location = "Teste"
+    PARAMS = {'data': c_message, 'step': 3}
+    c_res = requests.get(url = URL, params = PARAMS, verify=False)
+
     ## Issuer Crypt
-    ## Issuer send message to Holder with (cred_json)
+    ## Issuer send message to Holder with (cred_json, cred_def_id)
     ## Holder Decrypt
 
     ### Holder<
@@ -136,15 +166,25 @@ async def issue_credential():
 
     ### Holder>
 
-async def validate_credential(prover):
+async def validate_credential():
     ## Validator handshake DID with Holder
-    proof_req = validator.build_proof_request('gvt', '', '')
+    proof_req = validator.build_proof_request('RegistroPaciente', '', '')
+
+    c_message = await issuer.send_message_ab(json.dumps({'proof_req': proof_req, 'schema_id': issuer.schemas['RegistroPaciente'], 'cred_def_id': issuer.cred_defs['RegistroPaciente']}), holder_verkey)
+    URL = "https://localhost:5001/testRequestsReceiver2"
+    location = "Teste"
+    PARAMS = {'data': c_message}
+    c_res = requests.get(url = URL, params = PARAMS, verify=False)
+    jres = await issuer.recv_message_ba(c_res)
+    res = json.loads(jres)
+    proof_json = res['proof_json'] 
+    schemas_json = res['schemas_json']
+    cred_defs_json = res['cred_defs_json']
 
     ## Validator crypt
-    ## Validator send message to Holder with (proof_req)
+    ## Validator send message to Holder with (proof_req, schema_id, cred_def_id)
     ## Holder decrypt
 
-    ## falta buscar esses schemas e cred_defs sozinho no ledger (desaclopar)
     #proof_json, schemas_json, cred_defs_json = await prover.proof_req_to_get_cred(proof_req, schema_id, cred_def_id)
 
     ## Holder crypt
@@ -182,64 +222,65 @@ def init():
     run_coroutine(run)
 
 async def run():
-    global pool_handle, org_did, org_wallet, org_transcript_cred_def_id
+    start_issuer()
+    # global pool_handle, org_did, org_wallet, org_transcript_cred_def_id
 
-    bashCommand = "bash refresh.sh"
-    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-    output, error = process.communicate()
+    # bashCommand = "bash refresh.sh"
+    # process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+    # output, error = process.communicate()
 
-    pool_name = 'pool1'
-    logger.info("Open Pool Ledger: {}".format(pool_name))
-    pool_genesis_txn_path = get_pool_genesis_txn_path(pool_name)
-    pool_config = json.dumps({"genesis_txn": str(pool_genesis_txn_path)})
-    await pool.set_protocol_version(PROTOCOL_VERSION)
+    # pool_name = 'pool1'
+    # logger.info("Open Pool Ledger: {}".format(pool_name))
+    # pool_genesis_txn_path = get_pool_genesis_txn_path(pool_name)
+    # pool_config = json.dumps({"genesis_txn": str(pool_genesis_txn_path)})
+    # await pool.set_protocol_version(PROTOCOL_VERSION)
 
-    try:
-        await pool.create_pool_ledger_config(pool_name, pool_config)
-    except IndyError as ex:
-        if ex.error_code == ErrorCode.PoolLedgerConfigAlreadyExistsError:
-            pass
-    pool_handle = await pool.open_pool_ledger(pool_name, None)
+    # try:
+    #     await pool.create_pool_ledger_config(pool_name, pool_config)
+    # except IndyError as ex:
+    #     if ex.error_code == ErrorCode.PoolLedgerConfigAlreadyExistsError:
+    #         pass
+    # pool_handle = await pool.open_pool_ledger(pool_name, None)
 
-    admin_wallet_config = json.dumps({"id": "admin_wallet"})
-    admin_wallet_credentials = json.dumps({"key": "admin_wallet_key"})
-    try:
-        await wallet.create_wallet(admin_wallet_config, admin_wallet_credentials)
-    except IndyError as ex:
-        if ex.error_code == ErrorCode.WalletAlreadyExistsError:
-            pass
+    # admin_wallet_config = json.dumps({"id": "admin_wallet"})
+    # admin_wallet_credentials = json.dumps({"key": "admin_wallet_key"})
+    # try:
+    #     await wallet.create_wallet(admin_wallet_config, admin_wallet_credentials)
+    # except IndyError as ex:
+    #     if ex.error_code == ErrorCode.WalletAlreadyExistsError:
+    #         pass
 
-    admin_wallet = await wallet.open_wallet(admin_wallet_config, admin_wallet_credentials)
+    # admin_wallet = await wallet.open_wallet(admin_wallet_config, admin_wallet_credentials)
 
-    admin_did_info = {'seed': '000000000000000000000000Steward1'}
-    (admin_did, admin_key) = await did.create_and_store_my_did(admin_wallet, json.dumps(admin_did_info))
+    # admin_did_info = {'seed': '000000000000000000000000Steward1'}
+    # (admin_did, admin_key) = await did.create_and_store_my_did(admin_wallet, json.dumps(admin_did_info))
 
-    org_wallet_config = json.dumps({"id": f'{uuid.uuid4()}'})
-    org_wallet_credentials = json.dumps({"key": f'wallet_key_{uuid.uuid4()}'})
-    org_wallet, admin_org_key, org_admin_did, org_admin_key, _ = \
-         await onboarding(pool_handle, "Sovrin Steward", admin_wallet, admin_did, "org", None, org_wallet_config, org_wallet_credentials)
-    org_did = await get_verinym(pool_handle, "Sovrin Steward", admin_wallet, admin_did, admin_org_key, "org", org_wallet, org_admin_did, org_admin_key, 'TRUST_ANCHOR')
+    # org_wallet_config = json.dumps({"id": f'{uuid.uuid4()}'})
+    # org_wallet_credentials = json.dumps({"key": f'wallet_key_{uuid.uuid4()}'})
+    # org_wallet, admin_org_key, org_admin_did, org_admin_key, _ = \
+    #      await onboarding(pool_handle, "Sovrin Steward", admin_wallet, admin_did, "org", None, org_wallet_config, org_wallet_credentials)
+    # org_did = await get_verinym(pool_handle, "Sovrin Steward", admin_wallet, admin_did, admin_org_key, "org", org_wallet, org_admin_did, org_admin_key, 'TRUST_ANCHOR')
 
-    (org_certificate_schema_id, org_certificate_schema) = \
-         await anoncreds.issuer_create_schema(org_did, 'Job-Certificate', '0.2',
-                                              json.dumps(['first_name', 'last_name', 'salary', 'employee_status',
-                                                          'experience']))
+    # (org_certificate_schema_id, org_certificate_schema) = \
+    #      await anoncreds.issuer_create_schema(org_did, 'Job-Certificate', '0.2',
+    #                                           json.dumps(['first_name', 'last_name', 'salary', 'employee_status',
+    #                                                       'experience']))
 
-    await send_schema(pool_handle, org_wallet, org_did, org_certificate_schema)
+    # await send_schema(pool_handle, org_wallet, org_did, org_certificate_schema)
 
-    (transcript_schema_id, transcript_schema) = \
-        await anoncreds.issuer_create_schema(admin_did, 'Transcript', '1.2',
-                                             json.dumps(['first_name', 'last_name', 'degree', 'status',
-                                                         'year', 'average', 'ssn']))
-    await send_schema(pool_handle, admin_wallet, admin_did, transcript_schema)
+    # (transcript_schema_id, transcript_schema) = \
+    #     await anoncreds.issuer_create_schema(admin_did, 'Transcript', '1.2',
+    #                                          json.dumps(['first_name', 'last_name', 'degree', 'status',
+    #                                                      'year', 'average', 'ssn']))
+    # await send_schema(pool_handle, admin_wallet, admin_did, transcript_schema)
 
-    time.sleep(1)
-    (_, transcript_schema) = await get_schema(pool_handle, org_did, transcript_schema_id)
-    (org_transcript_cred_def_id, org_transcript_cred_def_json) = \
-        await anoncreds.issuer_create_and_store_credential_def(org_wallet, org_did, transcript_schema,
-                                                               'TAG1', 'CL', '{"support_revocation": false}')
+    # time.sleep(1)
+    # (_, transcript_schema) = await get_schema(pool_handle, org_did, transcript_schema_id)
+    # (org_transcript_cred_def_id, org_transcript_cred_def_json) = \
+    #     await anoncreds.issuer_create_and_store_credential_def(org_wallet, org_did, transcript_schema,
+    #                                                            'TAG1', 'CL', '{"support_revocation": false}')
 
-    await send_cred_def(pool_handle, org_wallet, org_did, org_transcript_cred_def_json)
+    # await send_cred_def(pool_handle, org_wallet, org_did, org_transcript_cred_def_json)
 
 def create_wallet():
     wallet_config = json.dumps({"id": f'{uuid.uuid4()}'})

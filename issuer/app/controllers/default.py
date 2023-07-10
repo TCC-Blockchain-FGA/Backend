@@ -18,6 +18,7 @@ bcrypt = Bcrypt(app)
 
 SECRET_KEY = "SECRET_KEY"
 
+
 def async_action(f):
     @wraps(f)
     def wrapped(*args, **kwargs):
@@ -40,7 +41,7 @@ def testRequestsSend():
     print(r)
 
     # POST
-    API_ENDPOINT = "https://localhost:5000/testRequestsReceiver"
+    API_ENDPOINT = "https://localhost:5001/testRequestsReceiver"
     data = {'api_dev_key':'API_KEY',
             'api_option':'paste',
             'api_paste_code':'source_code',
@@ -51,6 +52,7 @@ def testRequestsSend():
 
 @app.route("/testRequestsReceiver", methods=["GET", "POST"])
 def testRequestsReceiver():
+    ssi.issue_credential()
     print("\n\n\n\n\n\n\n\n\n\n\nRequisição recebida\n\n\n\n\n\n\n\n\n\n")
     return "Success"
 
