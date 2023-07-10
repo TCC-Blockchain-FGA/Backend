@@ -222,7 +222,7 @@ def init():
     run_coroutine(run)
 
 async def run():
-    start_issuer()
+    await start_issuer()
     # global pool_handle, org_did, org_wallet, org_transcript_cred_def_id
 
     # bashCommand = "bash refresh.sh"
