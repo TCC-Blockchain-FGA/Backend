@@ -153,7 +153,7 @@ async def delete_and_close(prover, pool_handle):
 
 
 async def run():
-    start_holder()
+    await start_holder()
     # issue_credential(prover)
     # validate_credential(prover)
     # delete_and_close(prover, pool_handle)

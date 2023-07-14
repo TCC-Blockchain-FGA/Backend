@@ -53,7 +53,7 @@ class Agent:
             print('Error occurred: %s' % e)
         return _did, _verkey
     
-    def create_wallet():
+    def create_wallet(self):
         wallet_config = json.dumps({"id": f'{uuid.uuid4()}'})
         wallet_credentials = json.dumps({"key": f'wallet_key_{uuid.uuid4()}'})
         return [wallet_config, wallet_credentials]

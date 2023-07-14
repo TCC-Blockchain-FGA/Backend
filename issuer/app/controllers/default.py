@@ -12,7 +12,7 @@ import requests
 
 ssi.init()
 
-CORS(app, support_credentials=True)
+CORS(app, supports_credentials=True)
 JWTManager(app)
 bcrypt = Bcrypt(app)
 
@@ -51,9 +51,9 @@ def testRequestsSend():
     return "Success"
 
 @app.route("/testRequestsReceiver", methods=["GET", "POST"])
-def testRequestsReceiver():
-    ssi.issue_credential()
-    print("\n\n\n\n\n\n\n\n\n\n\nRequisição recebida\n\n\n\n\n\n\n\n\n\n")
+async def testRequestsReceiver():
+    await ssi.issue_credential()
+    print("\n\nRequisição recebida\n\n")
     return "Success"
 
 @app.route("/", methods=["GET", "POST"])
