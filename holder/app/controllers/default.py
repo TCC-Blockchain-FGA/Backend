@@ -51,9 +51,13 @@ def testRequestsSend():
     return "Success"
 
 @app.route("/testRequestsReceiver", methods=["GET", "POST"])
-def testRequestsReceiver():
+@cross_origin(supports_credentials=True)
+@async_action
+async def testRequestsReceiver():
     print("\n\n\n\n\n\n\n\n\n\n\nRequisição recebida\n\n\n\n\n\n\n\n\n\n")
-    return ssi.issue_credential(request.args.get('data'), request.args.get('step'))
+    print(request.args.get('data'), request.args.get('step'))
+    await ssi.issue_credential(request.args.get('data'), request.args.get('step'))
+    return "Success"
 
 @app.route("/testRequestsReceiver2", methods=["GET", "POST"])
 def testRequestsReceiver2():

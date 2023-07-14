@@ -64,10 +64,11 @@ async def start_holder():
     await prover.create(pool_handle)
 
 async def issue_credential(connection_request, step):
+    print("\n\n\n\n\n\n\n\n\n\nAQUIIIIIIIIIIIIIIIIIIIIIIIIIIIIII\n\n\n\n\n")
 
     if step == 1:
         return prover.connect_did(connection_request)
-        
+
         #cred_offer_json = await issuer.new_cred_offer(cred_def_id)
 
         ## Issuer Crypt
@@ -99,7 +100,7 @@ async def issue_credential(connection_request, step):
     #cred_json = await issuer.request_to_cred_issue(cred_offer_json, cred_req_json, cred_values_json)
     if step == 3:
         message = json.loads(prover.recv_message_ba(connection_request))
-        
+
     ## Issuer Crypt
     ## Issuer send message to Holder with (cred_json, cred_def_id)
     ## Holder Decrypt
