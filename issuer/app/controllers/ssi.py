@@ -115,15 +115,15 @@ async def issue_credential():
 
     # print(cred_offer_json)
 
-    c_cred_offer_json = await issuer.send_message_ab("teste", holder_verkey)
-    c_cred_defs = await issuer.send_message_ab(json.dumps({'teste': 'teste'}), holder_verkey)
+    c_cred_offer_json = await issuer.send_message_ab(cred_offer_json, holder_verkey)
+    c_cred_defs = await issuer.send_message_ab(issuer.cred_defs['RegistroPaciente'], holder_verkey)
     URL = "https://localhost:5001/testRequestsReceiver"
-    data = {'c_cred_offer_json': c_cred_offer_json.decode('ascii'), 'c_cred_defs': c_cred_defs.decode('ascii'), 'step': 2}
+    data = {'c_cred_offer_json': c_cred_offer_json.decode('latin-1'), 'c_cred_defs': c_cred_defs.decode('latin-1'), 'step': 2}
     print(data)
     # print(data)
     c_res = requests.post(url = URL, data = data, verify=False)
-    return ''
     print('res', c_res._content)
+    return ''
     jres = await issuer.recv_message_ba(c_res._content)
     print('jres', jres)
     res = json.loads(jres)
