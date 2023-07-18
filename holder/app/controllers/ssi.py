@@ -1,3 +1,4 @@
+import re
 import time
 from indy import anoncreds, crypto, did, ledger, pool, wallet
 import json
@@ -64,11 +65,15 @@ async def start_holder():
     await prover.create(pool_handle)
 
 async def issue_credential(connection_request, step):
-    print("\n\n\n\n\n\n\n\n\n\nAQUIIIIIIIIIIIIIIIIIIIIIIIIIIIIII\n\n\n\n\n")
+    print("\n\nAQUIIIIIIIIIIIIIIIIIIIIIIIIIIIIII\n\n")
+    # print("\n\n\n", connection_request)
 
-    if step == 1:
-        return prover.connect_did(connection_request)
+    if step == '1':
+        print(connection_request)
 
+        res = await prover.connect_did(json.loads(connection_request))
+        print(res)
+        return res
         #cred_offer_json = await issuer.new_cred_offer(cred_def_id)
 
         ## Issuer Crypt
@@ -76,8 +81,15 @@ async def issue_credential(connection_request, step):
         # o cred_def_id ja esta dentro do cred_offer_json
         ## Holder Decrypt
 
-    if step == 2:
-        message = json.loads(prover.recv_message_ba(connection_request))
+    if step == '2':
+        mes :str = connection_request[0]
+        message = await prover.recv_message_ba(mes)
+        message2 = await prover.recv_message_ba(connection_request[1])
+        print('message', message)
+        print('message2', message2)
+        # message = {'cred_offer_json': connection_request[0], 'cred_def_id': connection_request[1]}
+        # print('message', message)
+        return 'sucess'
         (cred_req_json, cred_req_metadata_json) = await prover.offer_to_cred_request(message['cred_offer_json'], message['cred_def_id'])
 
         #### precisa parar e fazer o cadastro do forms
@@ -97,10 +109,12 @@ async def issue_credential(connection_request, step):
     ## Issuer Decrypt
 
     #
-    #cred_json = await issuer.request_to_cred_issue(cred_offer_json, cred_req_json, cred_values_json)
-    if step == 3:
-        message = json.loads(prover.recv_message_ba(connection_request))
+    # cred_json = await issuer.request_to_cred_issue(cred_offer_json, cred_req_json, cred_values_json)
+    if step == '3':
+        # message = json.loads(prover.recv_message_ba(connection_request))
 
+        message = {'cred_offer_json': connection_request[0], 'cred_def_id': connection_request[1]}
+        print(message)
     ## Issuer Crypt
     ## Issuer send message to Holder with (cred_json, cred_def_id)
     ## Holder Decrypt

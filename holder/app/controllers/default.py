@@ -9,11 +9,11 @@ import app.controllers.ssi as ssi
 import asyncio
 from functools import wraps
 import requests
-import requests
+import json
 
 ssi.init()
 
-CORS(app, support_credentials=True)
+CORS(app, supports_credentials=True)
 JWTManager(app)
 bcrypt = Bcrypt(app)
 
@@ -54,14 +54,21 @@ def testRequestsSend():
 @cross_origin(supports_credentials=True)
 @async_action
 async def testRequestsReceiver():
-    print("\n\n\n\n\n\n\n\n\n\n\nRequisição recebida\n\n\n\n\n\n\n\n\n\n")
-    print(request.args.get('data'), request.args.get('step'))
-    await ssi.issue_credential(request.args.get('data'), request.args.get('step'))
-    return "Success"
+    print("\n\n\nRequisição recebida\n\n")
+    # print('args ', request.form.get('data').encode('utf-8'), request.form.get('step'))
+    if request.form.get('step') == '2':
+        data = (request.form.get('c_cred_offer_json'), request.form.get('c_cred_defs'))
+        # print(data[0], data[1])
+    else:
+        data = request.form.get('data')
+    res = await ssi.issue_credential(data, request.form.get('step'))
+    print(res)
+    return res
+    
 
 @app.route("/testRequestsReceiver2", methods=["GET", "POST"])
 def testRequestsReceiver2():
-    print("\n\n\n\n\n\n\n\n\n\n\nRequisição recebida\n\n\n\n\n\n\n\n\n\n")
+    print("\n\n\nRequisição recebida\n\n")
     return ssi.validate_credential(request.args.get('data'))
 
 

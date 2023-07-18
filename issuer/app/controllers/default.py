@@ -51,6 +51,8 @@ def testRequestsSend():
     return "Success"
 
 @app.route("/testRequestsReceiver", methods=["GET", "POST"])
+@cross_origin(supports_credentials=True)
+@async_action
 async def testRequestsReceiver():
     await ssi.issue_credential()
     print("\n\nRequisição recebida\n\n")

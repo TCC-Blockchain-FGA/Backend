@@ -9,8 +9,8 @@ from src.utils import get_pool_genesis_txn_path, run_coroutine, PROTOCOL_VERSION
 import subprocess
 import uuid
 import app.controllers.database as database
-
-
+import requests
+from flask import Response
 import asyncio
 import json
 import pprint
@@ -96,69 +96,79 @@ async def issue_credential():
         'did': issuer.did,
         'nonce': hash(issuer.did)
     }
-    c_message = await issuer.send_message_ab(connection_request, None)
+    c_message = await issuer.send_message_ab(json.dumps(connection_request), None)
 
+    # print(issuer.did)
+    # print(c_message)
     URL = "https://localhost:5001/testRequestsReceiver"
-    location = "Teste"
-    PARAMS = {'data': c_message, 'step': 1}
-    c_res = requests.get(url = URL, params = PARAMS, verify=False)
-    jres = await issuer.recv_message_ba(c_res)
+    data = {'data': c_message, 'step': 1}
+    c_res = requests.post(url = URL, data = data, verify=False)
+    print(c_res._content)
+    jres = await issuer.recv_message_ba(c_res._content)
+    jres = jres.decode()
+    print('jres',jres)
+
     res = json.loads(jres)
-    print(res)
     holder_did = res['did']
     holder_verkey = res['verkey']
     cred_offer_json = await issuer.new_cred_offer(issuer.cred_defs['RegistroPaciente'])
 
-    c_message = await issuer.send_message_ab(json.dumps({'cred_offer_json': cred_offer_json, 'cred_def_id': issuer.cred_defs['RegistroPaciente']}), holder_verkey)
+    # print(cred_offer_json)
 
+    c_cred_offer_json = await issuer.send_message_ab("teste", holder_verkey)
+    c_cred_defs = await issuer.send_message_ab(json.dumps({'teste': 'teste'}), holder_verkey)
     URL = "https://localhost:5001/testRequestsReceiver"
-    location = "Teste"
-    PARAMS = {'data': c_message, 'step': 2}
-    c_res = requests.get(url = URL, params = PARAMS, verify=False)
-    jres = await issuer.recv_message_ba(c_res)
+    data = {'c_cred_offer_json': c_cred_offer_json.decode('ascii'), 'c_cred_defs': c_cred_defs.decode('ascii'), 'step': 2}
+    print(data)
+    # print(data)
+    c_res = requests.post(url = URL, data = data, verify=False)
+    return ''
+    print('res', c_res._content)
+    jres = await issuer.recv_message_ba(c_res._content)
+    print('jres', jres)
     res = json.loads(jres)
+
     cred_req_json = res['cred_req_json'] 
     cred_values_json = res['cred_values_json']
-    ## Issuer Crypt
-    ## Issuer send message to holder with (cred_offer_json, cred_def_id)
-    # o cred_def_id ja esta dentro do cred_offer_json
-    ## Holder Decrypt
+    # ## Issuer Crypt
+    # ## Issuer send message to holder with (cred_offer_json, cred_def_id)
+    # # o cred_def_id ja esta dentro do cred_offer_json
+    # ## Holder Decrypt
 
 
-    ### Holder<
+    # ### Holder<
 
-    #prover = Holder()
-    #await prover.create(pool_handle)
-    #(cred_req_json, cred_req_metadata_json) = await prover.offer_to_cred_request(cred_offer_json, cred_def_id)
+    # #prover = Holder()
+    # #await prover.create(pool_handle)
+    # #(cred_req_json, cred_req_metadata_json) = await prover.offer_to_cred_request(cred_offer_json, cred_def_id)
 
-    ## falta fazer o encoded automatico
-    #cred_values_json = json.dumps({
-    #    'name': {'raw': 'matheus', 'encoded': '12345'}, 'phone': {'raw': '61912341234', 'encoded': '12345'}, 'gender': {'raw': 'm', 'encoded': '12345'}, \
-    #    'dateOfBirth': {'raw': '01011999', 'encoded': '12345'}, 'address':{'raw': 'Brasilia', 'encoded': '12345'}, 'maritalStatus': {'raw': 'abc', 'encoded': '12345'}, \
-    #    'multipleBirth': {'raw': '0', 'encoded': '12345'}, 'contactRelationship': {'raw': 'a', 'encoded': '12345'}, 'contactName': {'raw': 'mamama', 'encoded': '12345'}, \
-    #    'contactPhone': {'raw': '61901011010', 'encoded': '12345'}, 'contactAddress': {'raw': 'Brasilia', 'encoded': '12345'}, 'contactGender': {'raw': 'm', 'encoded': '12345'}, \
-    #    'languages': {'raw': 'pt', 'encoded': '12345'}, 'preferredLanguage': {'raw': 'pt', 'encoded': '12345'}, 'generalPractitioner': {'raw': 'abccba', 'encoded': '12345'},
-    #})
+    # ## falta fazer o encoded automatico
+    # #cred_values_json = json.dumps({
+    # #    'name': {'raw': 'matheus', 'encoded': '12345'}, 'phone': {'raw': '61912341234', 'encoded': '12345'}, 'gender': {'raw': 'm', 'encoded': '12345'}, \
+    # #    'dateOfBirth': {'raw': '01011999', 'encoded': '12345'}, 'address':{'raw': 'Brasilia', 'encoded': '12345'}, 'maritalStatus': {'raw': 'abc', 'encoded': '12345'}, \
+    # #    'multipleBirth': {'raw': '0', 'encoded': '12345'}, 'contactRelationship': {'raw': 'a', 'encoded': '12345'}, 'contactName': {'raw': 'mamama', 'encoded': '12345'}, \
+    # #    'contactPhone': {'raw': '61901011010', 'encoded': '12345'}, 'contactAddress': {'raw': 'Brasilia', 'encoded': '12345'}, 'contactGender': {'raw': 'm', 'encoded': '12345'}, \
+    # #    'languages': {'raw': 'pt', 'encoded': '12345'}, 'preferredLanguage': {'raw': 'pt', 'encoded': '12345'}, 'generalPractitioner': {'raw': 'abccba', 'encoded': '12345'},
+    # #})
 
 
-    ### Holder>
+    # ### Holder>
 
-    ## Holder Crypt
-    ## Holder send message to Issuer with (cred_req_json, cred_values_json)
-    ## Issuer Decrypt
+    # ## Holder Crypt
+    # ## Holder send message to Issuer with (cred_req_json, cred_values_json)
+    # ## Issuer Decrypt
 
 
     cred_json = await issuer.request_to_cred_issue(cred_offer_json, cred_req_json, cred_values_json)
 
     c_message = await issuer.send_message_ab(json.dumps({'cred_json': cred_json, 'cred_def_id': issuer.cred_defs['RegistroPaciente']}), holder_verkey)
     URL = "https://localhost:5001/testRequestsReceiver"
-    location = "Teste"
-    PARAMS = {'data': c_message, 'step': 3}
-    c_res = requests.get(url = URL, params = PARAMS, verify=False)
+    data = {'cred_json': cred_json, 'cred_def_id': issuer.cred_defs['RegistroPaciente'], 'step': 3}
+    c_res = requests.get(url = URL, data = data, verify=False)
 
-    ## Issuer Crypt
-    ## Issuer send message to Holder with (cred_json, cred_def_id)
-    ## Holder Decrypt
+    # ## Issuer Crypt
+    # ## Issuer send message to Holder with (cred_json, cred_def_id)
+    # ## Holder Decrypt
 
     ### Holder<
 
@@ -175,7 +185,7 @@ async def validate_credential():
     location = "Teste"
     PARAMS = {'data': c_message}
     c_res = requests.get(url = URL, params = PARAMS, verify=False)
-    jres = await issuer.recv_message_ba(c_res)
+    jres = await issuer.recv_message_ba(c_res, holder_verkey)
     res = json.loads(jres)
     proof_json = res['proof_json'] 
     schemas_json = res['schemas_json']

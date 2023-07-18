@@ -286,16 +286,16 @@ class Holder(Agent):
         })
         self.issuer_verkey = to_verkey
         ##send this response 
-        return await self.send_message_ab(connection_response.encode('utf-8'), to_verkey)
+        return await self.send_message_ab(connection_response, to_verkey)
 
     async def send_message_ab(self, message, to_verkey):
         if to_verkey != None:
-            crypted_message = await crypto.pack_message(self.wallet, message, [to_verkey], self.verkey)
+            crypted_message = await crypto.auth_crypt(self.wallet, self.verkey, to_verkey, message.encode('utf-8'))
         else:
-            crypted_message = message
+            crypted_message = message.encode('utf-8')
         return crypted_message
     
-    async def recv_message_ba(self, crypted_message):
+    async def recv_message_ba(self, crypted_message: bytes):
         """
         (Authcrypt mode)
 
@@ -306,8 +306,15 @@ class Holder(Agent):
         }
 
         """
-        message = await crypto.unpack_message(self.wallet, crypted_message)
-        return message['message']
+        print(type(crypted_message))
+        print('recv', crypted_message)
+
+        crypted_message = bytes(crypted_message, 'ascii')
+        print('recv', crypted_message)
+        message = await crypto.auth_decrypt(self.wallet, self.verkey, crypted_message)
+        print(message)
+        return message
+    
     
 
     async def get_cred_def(self, cred_def_id):

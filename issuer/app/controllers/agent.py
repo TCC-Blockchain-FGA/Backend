@@ -173,9 +173,9 @@ class Issuer(Agent):
     
     async def send_message_ab(self, message, to_verkey):
         if to_verkey != None:
-            crypted_message = await crypto.pack_message(self.wallet, message, [to_verkey], self.verkey)
+            crypted_message = await crypto.auth_crypt(self.wallet, self.verkey, to_verkey, message.encode('utf-8'))
         else:
-            crypted_message = message
+            crypted_message = message.encode('utf-8')
         return crypted_message
     
     async def recv_message_ba(self, crypted_message):
@@ -189,8 +189,8 @@ class Issuer(Agent):
         }
 
         """
-        message = await crypto.unpack_message(self.wallet, crypted_message)
-        return message['message']
+        (_, message) = await crypto.auth_decrypt(self.wallet, self.verkey, crypted_message)
+        return message
     
 
     async def get_schema(self, schema_id):
@@ -233,7 +233,7 @@ class Issuer(Agent):
                 '\n14. Issuer (Trust Anchor) is creating a Credential Offer for Prover\n')
             cred_offer_json = await anoncreds.issuer_create_credential_offer(self.wallet, cred_def_id)
             self.print_log('Credential Offer: ')
-            pprint.pprint(json.loads(cred_offer_json))
+            # pprint.pprint(json.loads(cred_offer_json))
         except IndyError as e:
             print('Error occurred: %s' % e)
             cred_offer_json = '{}'
