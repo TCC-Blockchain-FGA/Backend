@@ -311,7 +311,7 @@ class Holder(Agent):
 
         crypted_message = bytes(crypted_message, 'latin-1')
         print('recv', crypted_message)
-        message = await crypto.auth_decrypt(self.wallet, self.verkey, crypted_message)
+        _, message = await crypto.auth_decrypt(self.wallet, self.verkey, crypted_message)
         print(message)
         return message
     

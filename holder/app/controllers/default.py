@@ -57,8 +57,10 @@ async def testRequestsReceiver():
     print("\n\n\nRequisição recebida\n\n")
     # print('args ', request.form.get('data').encode('utf-8'), request.form.get('step'))
     if request.form.get('step') == '2':
-        data = (request.form.get('c_cred_offer_json'), request.form.get('c_cred_defs'))
+        data = (request.form.get('c_cred_offer_json'), request.form.get('c_cred_def_id'))
         # print(data[0], data[1])
+    elif request.form.get('step') == '3':
+        data = (request.form.get('c_cred_json'), request.form.get('c_cred_def_id'))
     else:
         data = request.form.get('data')
     res = await ssi.issue_credential(data, request.form.get('step'))

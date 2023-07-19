@@ -82,18 +82,13 @@ async def issue_credential(connection_request, step):
         ## Holder Decrypt
 
     if step == '2':
-        mes :str = connection_request[0]
-        message = await prover.recv_message_ba(mes)
+        message1 = await prover.recv_message_ba(connection_request[0])
         message2 = await prover.recv_message_ba(connection_request[1])
+        message = {'cred_offer_json': message1.decode('utf-8'), 'cred_def_id': message2.decode('utf-8')}
         print('message', message)
-        print('message2', message2)
-        # message = {'cred_offer_json': connection_request[0], 'cred_def_id': connection_request[1]}
-        # print('message', message)
-        return 'sucess'
         (cred_req_json, cred_req_metadata_json) = await prover.offer_to_cred_request(message['cred_offer_json'], message['cred_def_id'])
-
         #### precisa parar e fazer o cadastro do forms
-
+        prover.cred_req_metadata_json = cred_req_metadata_json
         ## falta fazer o encoded automatico
         cred_values_json = json.dumps({
             'name': {'raw': 'matheus', 'encoded': '12345'}, 'phone': {'raw': '61912341234', 'encoded': '12345'}, 'gender': {'raw': 'm', 'encoded': '12345'}, \
@@ -110,16 +105,20 @@ async def issue_credential(connection_request, step):
 
     #
     # cred_json = await issuer.request_to_cred_issue(cred_offer_json, cred_req_json, cred_values_json)
-    if step == '3':
-        # message = json.loads(prover.recv_message_ba(connection_request))
 
-        message = {'cred_offer_json': connection_request[0], 'cred_def_id': connection_request[1]}
-        print(message)
     ## Issuer Crypt
     ## Issuer send message to Holder with (cred_json, cred_def_id)
     ## Holder Decrypt
+    if step == '3':
+        # message = json.loads(prover.recv_message_ba(connection_request))
+        message1 = await prover.recv_message_ba(connection_request[0])
+        message2 = await prover.recv_message_ba(connection_request[1])
+        message = {'cred_json': message1.decode('utf-8'), 'cred_def_id': message2.decode('utf-8')}
+        print('message', message)
 
-        await prover.store_ver_cred(cred_req_metadata_json, message['cred_json'], message['cred_def_id'])
+        print('metadata', prover.cred_req_metadata_json)
+
+        await prover.store_ver_cred(prover.cred_req_metadata_json, message['cred_json'], message['cred_def_id'])
         return 'Success'
 
 async def validate_credential(c_message):
