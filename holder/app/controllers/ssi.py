@@ -82,9 +82,9 @@ async def issue_credential(connection_request, step):
         ## Holder Decrypt
 
     if step == '2':
-        message1 = await prover.recv_message_ba(connection_request[0])
-        message2 = await prover.recv_message_ba(connection_request[1])
-        message = {'cred_offer_json': message1.decode('utf-8'), 'cred_def_id': message2.decode('utf-8')}
+        message1 = (await prover.recv_message_ba(connection_request[0])).decode('utf-8')
+        message2 = (await prover.recv_message_ba(connection_request[1])).decode('utf-8')
+        message = {'cred_offer_json': message1, 'cred_def_id': message2}
         print('message', message)
         (cred_req_json, cred_req_metadata_json) = await prover.offer_to_cred_request(message['cred_offer_json'], message['cred_def_id'])
         #### precisa parar e fazer o cadastro do forms
@@ -111,9 +111,9 @@ async def issue_credential(connection_request, step):
     ## Holder Decrypt
     if step == '3':
         # message = json.loads(prover.recv_message_ba(connection_request))
-        message1 = await prover.recv_message_ba(connection_request[0])
-        message2 = await prover.recv_message_ba(connection_request[1])
-        message = {'cred_json': message1.decode('utf-8'), 'cred_def_id': message2.decode('utf-8')}
+        message1 = (await prover.recv_message_ba(connection_request[0])).decode('utf-8')
+        message2 = (await prover.recv_message_ba(connection_request[1])).decode('utf-8')
+        message = {'cred_json': message1, 'cred_def_id': message2}
         print('message', message)
 
         print('metadata', prover.cred_req_metadata_json)
@@ -121,7 +121,7 @@ async def issue_credential(connection_request, step):
         await prover.store_ver_cred(prover.cred_req_metadata_json, message['cred_json'], message['cred_def_id'])
         return 'Success'
 
-async def validate_credential(c_message):
+async def validate_credential(c_message, step):
 
     ## Validator handshake DID with Holder
 
@@ -131,9 +131,22 @@ async def validate_credential(c_message):
     ## Validator crypt
     ## Validator send message to Holder with (proof_req)
     ## Holder decrypt
+    if step == '1':
+        print(c_message)
 
-    message = json.loads(prover.recv_message_ba(c_message))
+        res = await prover.connect_did(json.loads(c_message))
+        print(res)
+        return res
 
+    
+
+    proof_req = (await prover.recv_message_ba(c_message[0])).decode('utf-8')
+    schema_id = (await prover.recv_message_ba(c_message[1])).decode('utf-8')
+    cred_def_id = (await prover.recv_message_ba(c_message[2])).decode('utf-8')
+    message = {'proof_req': proof_req, 'schema_id': schema_id, 'cred_def_id':cred_def_id}
+
+    print('message', message)
+    # message = json.loads(prover.recv_message_ba(c_message))
 
     ## falta buscar esses schemas e cred_defs sozinho no ledger (desaclopar)
     proof_json, schemas_json, cred_defs_json = await prover.proof_req_to_get_cred(message['proof_req'], message['schema_id'], message['cred_def_id'])
@@ -148,7 +161,7 @@ async def validate_credential(c_message):
 
     ###
 
-async def delete_and_close(prover, pool_handle):
+async def delete_and_close(pool_handle):
 
     await prover.delete()
 

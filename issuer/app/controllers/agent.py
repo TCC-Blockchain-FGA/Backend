@@ -290,9 +290,9 @@ class Holder(Agent):
 
     async def send_message_ab(self, message, to_verkey):
         if to_verkey != None:
-            crypted_message = await crypto.pack_message(self.wallet, message, [to_verkey], self.verkey)
+            crypted_message = await crypto.auth_crypt(self.wallet, self.verkey, to_verkey, message.encode('utf-8'))
         else:
-            crypted_message = message
+            crypted_message = message.encode('utf-8')
         return crypted_message
     
     async def recv_message_ba(self, crypted_message):
@@ -306,9 +306,8 @@ class Holder(Agent):
         }
 
         """
-        message = await crypto.unpack_message(self.wallet, crypted_message)
-        return message['message']
-    
+        (_, message) = await crypto.auth_decrypt(self.wallet, self.verkey, crypted_message)
+        return message
 
     async def get_cred_def(self, cred_def_id):
         try:
@@ -390,6 +389,28 @@ class Validator(Agent):
         pass
 
 
+    async def send_message_ab(self, message, to_verkey):
+        if to_verkey != None:
+            crypted_message = await crypto.auth_crypt(self.wallet, self.verkey, to_verkey, message.encode('utf-8'))
+        else:
+            crypted_message = message.encode('utf-8')
+        return crypted_message
+    
+    async def recv_message_ba(self, crypted_message):
+        """
+        (Authcrypt mode)
+
+        {
+            "message": <decrypted message>,
+            "recipient_verkey": <recipient verkey used to decrypt>,
+            "sender_verkey": <sender verkey used to encrypt>
+        }
+
+        """
+        (_, message) = await crypto.auth_decrypt(self.wallet, self.verkey, crypted_message)
+        return message
+    
+    
     async def create(self, pool_handle):
         try:
             await self.createAgent(pool_handle)

@@ -165,7 +165,7 @@ async def issue_credential():
     c_cred_def_id = await issuer.send_message_ab(issuer.cred_defs['RegistroPaciente'], holder_verkey)
     URL = "https://localhost:5001/testRequestsReceiver"
     data = {'c_cred_json': c_cred_json.decode('latin-1'), 'c_cred_def_id': c_cred_def_id.decode('latin-1'), 'step': 3}
-    c_res = requests.get(url = URL, data = data, verify=False)
+    c_res = requests.post(url = URL, data = data, verify=False)
 
     # ## Issuer Crypt
     # ## Issuer send message to Holder with (cred_json, cred_def_id)
@@ -181,12 +181,35 @@ async def validate_credential():
     ## Validator handshake DID with Holder
     proof_req = validator.build_proof_request('RegistroPaciente', '', '')
 
-    c_message = await issuer.send_message_ab(json.dumps({'proof_req': proof_req, 'schema_id': issuer.schemas['RegistroPaciente'], 'cred_def_id': issuer.cred_defs['RegistroPaciente']}), holder_verkey)
+    ## Validator handshake DID with Holder
+    connection_request = {
+        'did': validator.did,
+        'nonce': hash(validator.did)
+    }
+    c_message = await validator.send_message_ab(json.dumps(connection_request), None)
+
+    # print(validator.did)
+    # print(c_message)
     URL = "https://localhost:5001/testRequestsReceiver2"
-    location = "Teste"
-    PARAMS = {'data': c_message}
-    c_res = requests.get(url = URL, params = PARAMS, verify=False)
-    jres = await issuer.recv_message_ba(c_res, holder_verkey)
+    data = {'data': c_message, 'step': 1}
+    c_res = requests.post(url = URL, data = data, verify=False)
+    print(c_res._content)
+    jres = await validator.recv_message_ba(c_res._content)
+    
+    res = json.loads(jres)
+    holder_did = res['did']
+    holder_verkey = res['verkey']
+    print('jres',jres)
+    print('proff', proof_req)
+    c_proof_req = await validator.send_message_ab(proof_req, holder_verkey)
+    c_schema_id = await validator.send_message_ab(issuer.schemas['RegistroPaciente'], holder_verkey)
+    c_cred_def_id = await validator.send_message_ab(issuer.cred_defs['RegistroPaciente'], holder_verkey)
+
+    URL = "https://localhost:5001/testRequestsReceiver2"
+    data = {'c_proof_req': c_proof_req.decode('latin-1'), 'c_schema_id': c_schema_id.decode('latin-1'), 'c_cred_def_id':c_cred_def_id.decode('latin-1'), 'step': 2}
+    c_res = requests.post(url = URL, data = data, verify=False)
+    print(c_res._content)
+    jres = await validator.recv_message_ba(c_res._content)
     res = json.loads(jres)
     proof_json = res['proof_json'] 
     schemas_json = res['schemas_json']
@@ -206,7 +229,7 @@ async def validate_credential():
 
     ###
 
-async def delete_and_close(prover, pool_handle):
+async def delete_and_close(pool_handle):
 
     await issuer.delete()
     #await prover.delete()

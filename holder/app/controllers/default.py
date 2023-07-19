@@ -69,9 +69,15 @@ async def testRequestsReceiver():
     
 
 @app.route("/testRequestsReceiver2", methods=["GET", "POST"])
-def testRequestsReceiver2():
+@cross_origin(supports_credentials=True)
+@async_action
+async def testRequestsReceiver2():
     print("\n\n\nRequisição recebida\n\n")
-    return ssi.validate_credential(request.args.get('data'))
+    if request.form.get('step') != '1':
+        data = (request.form.get('c_proof_req'), request.form.get('c_schema_id'), request.form.get('c_cred_def_id'))
+    else:
+        data = request.form.get('data')
+    return await ssi.validate_credential(data, request.form.get('step'))
 
 
 @app.route("/", methods=["GET", "POST"])

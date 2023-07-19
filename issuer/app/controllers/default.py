@@ -58,6 +58,14 @@ async def testRequestsReceiver():
     print("\n\nRequisição recebida\n\n")
     return "Success"
 
+@app.route("/testRequestsReceiver2", methods=["GET", "POST"])
+@cross_origin(supports_credentials=True)
+@async_action
+async def testRequestsReceiver2():
+    await ssi.validate_credential()
+    print("\n\nRequisição recebida\n\n")
+    return "Success"
+
 @app.route("/", methods=["GET", "POST"])
 def home():
     return "Success"
