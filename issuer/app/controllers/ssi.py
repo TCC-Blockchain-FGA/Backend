@@ -71,7 +71,7 @@ async def pool_genesys(protocol_version, pool_name, pool_config):
 
 async def start_issuer():
     pool_handle = await pool_genesys(PROTOCOL_VERSION, pool_name=pool_name, pool_config=pool_config)
-    
+
     await steward.create(pool_handle)
     await issuer.create(pool_handle)
     await validator.create(pool_handle)
@@ -87,10 +87,9 @@ async def start_issuer():
                     'contactPhone', 'contactAddress', 'contactGender', \
                     'languages', 'preferredLanguage', 'generalPractitioner',])
 
-
     await issuer.new_cred_def(schema_id)
 
-async def issue_credential():
+async def issue_credential(login):
     ## Issuer handshake DID with Holder
     connection_request = {
         'did': issuer.did,
@@ -101,7 +100,7 @@ async def issue_credential():
     # print(issuer.did)
     # print(c_message)
     URL = "https://localhost:5001/testRequestsReceiver"
-    data = {'data': c_message, 'step': 1}
+    data = {'data': c_message, 'step': 1, 'login': login}
     c_res = requests.post(url = URL, data = data, verify=False)
     print(c_res._content)
     jres = await issuer.recv_message_ba(c_res._content)
@@ -118,7 +117,7 @@ async def issue_credential():
     c_cred_offer_json = await issuer.send_message_ab(cred_offer_json, holder_verkey)
     c_cred_def_id = await issuer.send_message_ab(issuer.cred_defs['RegistroPaciente'], holder_verkey)
     URL = "https://localhost:5001/testRequestsReceiver"
-    data = {'c_cred_offer_json': c_cred_offer_json.decode('latin-1'), 'c_cred_def_id': c_cred_def_id.decode('latin-1'), 'step': 2}
+    data = {'c_cred_offer_json': c_cred_offer_json.decode('latin-1'), 'c_cred_def_id': c_cred_def_id.decode('latin-1'), 'step': 2, 'login': login}
     print(data)
     # print(data)
     c_res = requests.post(url = URL, data = data, verify=False)
@@ -128,7 +127,7 @@ async def issue_credential():
     res = json.loads(jres)
     print('res', res)
 
-    cred_req_json = res['cred_req_json'] 
+    cred_req_json = res['cred_req_json']
     cred_values_json = res['cred_values_json']
     # ## Issuer Crypt
     # ## Issuer send message to holder with (cred_offer_json, cred_def_id)
@@ -164,7 +163,7 @@ async def issue_credential():
     c_cred_json = await issuer.send_message_ab(cred_json, holder_verkey)
     c_cred_def_id = await issuer.send_message_ab(issuer.cred_defs['RegistroPaciente'], holder_verkey)
     URL = "https://localhost:5001/testRequestsReceiver"
-    data = {'c_cred_json': c_cred_json.decode('latin-1'), 'c_cred_def_id': c_cred_def_id.decode('latin-1'), 'step': 3}
+    data = {'c_cred_json': c_cred_json.decode('latin-1'), 'c_cred_def_id': c_cred_def_id.decode('latin-1'), 'step': 3, 'login': login}
     c_res = requests.post(url = URL, data = data, verify=False)
 
     # ## Issuer Crypt
@@ -195,7 +194,7 @@ async def validate_credential():
     c_res = requests.post(url = URL, data = data, verify=False)
     print(c_res._content)
     jres = await validator.recv_message_ba(c_res._content)
-    
+
     res = json.loads(jres)
     holder_did = res['did']
     holder_verkey = res['verkey']
@@ -211,7 +210,7 @@ async def validate_credential():
     print(c_res._content)
     jres = await validator.recv_message_ba(c_res._content)
     res = json.loads(jres)
-    proof_json = res['proof_json'] 
+    proof_json = res['proof_json']
     schemas_json = res['schemas_json']
     cred_defs_json = res['cred_defs_json']
 

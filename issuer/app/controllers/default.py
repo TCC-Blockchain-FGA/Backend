@@ -1,5 +1,5 @@
 from app import app
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect, url_for
 from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
 import jwt
@@ -54,7 +54,7 @@ def testRequestsSend():
 @cross_origin(supports_credentials=True)
 @async_action
 async def testRequestsReceiver():
-    await ssi.issue_credential()
+    await ssi.issue_credential(request.args.get('login'))
     print("\n\nRequisição recebida\n\n")
     return "Success"
 
@@ -107,7 +107,8 @@ def login():
 @app.route("/register", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)
 def register():
-    return database.register(request)
+    login = database.register(request)
+    return redirect(url_for('testRequestsReceiver', login=login))
 
 @app.route("/userByLogin", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)

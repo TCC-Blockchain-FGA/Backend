@@ -123,7 +123,6 @@ def register(request):
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     jsonData = request.get_json()
-    wallet = ssi.create_wallet()
     if jsonData['login'] != "" and jsonData['password'] != "":
         try:
             pw_hash = bcrypt.generate_password_hash(jsonData['password']).decode('utf-8')
@@ -149,12 +148,12 @@ def register(request):
                     walletConfig,
                     walletCredentials
                 ) VALUES('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')
-            """%(jsonData['login'], jsonData['name'], jsonData['phone'], pw_hash, jsonData['gender'], jsonData['dateOfBirth'], jsonData['address'], jsonData['maritalStatus'], jsonData['multipleBirth'], jsonData['contactRelationship'], jsonData['contactName'], jsonData['contactPhone'], jsonData['contactAddress'], jsonData['contactGender'], jsonData['languages'], jsonData['preferredLanguage'], jsonData['generalPractitioner'], wallet[0], wallet[1]))
+            """%(jsonData['login'], jsonData['name'], jsonData['phone'], pw_hash, jsonData['gender'], jsonData['dateOfBirth'], jsonData['address'], jsonData['maritalStatus'], jsonData['multipleBirth'], jsonData['contactRelationship'], jsonData['contactName'], jsonData['contactPhone'], jsonData['contactAddress'], jsonData['contactGender'], jsonData['languages'], jsonData['preferredLanguage'], jsonData['generalPractitioner'], "", ""))
             conn.commit()
-            return jsonify({'message': 'success'}), 200
+            return jsonData['login']
         except:
-            return "Intern Erro", 500
-    return "Intern Erro", 500
+            return "Intern Erro"
+    return "Intern Erro"
 
 def login(request):
     conn = get_db_connection()

@@ -1,5 +1,5 @@
 from app import app
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect, url_for
 from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
 import jwt
@@ -63,10 +63,10 @@ async def testRequestsReceiver():
         data = (request.form.get('c_cred_json'), request.form.get('c_cred_def_id'))
     else:
         data = request.form.get('data')
-    res = await ssi.issue_credential(data, request.form.get('step'))
+    res = await ssi.issue_credential(data, request.form.get('step'), request.form.get('login'))
     print(res)
     return res
-    
+
 
 @app.route("/testRequestsReceiver2", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)
@@ -81,7 +81,10 @@ async def testRequestsReceiver2():
 
 
 @app.route("/", methods=["GET", "POST"])
-def home():
+@cross_origin(supports_credentials=True)
+@async_action
+async def home():
+    # return redirect(url_for('testRequestsReceiver2'))
     return "Success"
 
 @app.route("/generateCredential", methods=["GET", "POST"])

@@ -64,8 +64,7 @@ async def start_holder():
     pool_handle = await pool_genesys(PROTOCOL_VERSION, pool_name=pool_name, pool_config=pool_config)
     await prover.create(pool_handle)
 
-async def issue_credential(connection_request, step):
-    print("\n\nAQUIIIIIIIIIIIIIIIIIIIIIIIIIIIIII\n\n")
+async def issue_credential(connection_request, step, login):
     # print("\n\n\n", connection_request)
 
     if step == '1':
@@ -90,12 +89,13 @@ async def issue_credential(connection_request, step):
         #### precisa parar e fazer o cadastro do forms
         prover.cred_req_metadata_json = cred_req_metadata_json
         ## falta fazer o encoded automatico
+        user = database.user_by_login(login)
         cred_values_json = json.dumps({
-            'name': {'raw': 'matheus', 'encoded': '12345'}, 'phone': {'raw': '61912341234', 'encoded': '12345'}, 'gender': {'raw': 'm', 'encoded': '12345'}, \
-            'dateOfBirth': {'raw': '19990101', 'encoded': '12345'}, 'address':{'raw': 'Brasilia', 'encoded': '12345'}, 'maritalStatus': {'raw': 'abc', 'encoded': '12345'}, \
-            'multipleBirth': {'raw': '0', 'encoded': '12345'}, 'contactRelationship': {'raw': 'a', 'encoded': '12345'}, 'contactName': {'raw': 'mamama', 'encoded': '12345'}, \
-            'contactPhone': {'raw': '61901011010', 'encoded': '12345'}, 'contactAddress': {'raw': 'Brasilia', 'encoded': '12345'}, 'contactGender': {'raw': 'm', 'encoded': '12345'}, \
-            'languages': {'raw': 'pt', 'encoded': '12345'}, 'preferredLanguage': {'raw': 'pt', 'encoded': '12345'}, 'generalPractitioner': {'raw': 'abccba', 'encoded': '12345'},
+            'name': {'raw': user[3], 'encoded': '12345'}, 'phone': {'raw': user[2], 'encoded': '12345'}, 'gender': {'raw': user[5], 'encoded': '12345'}, \
+            'dateOfBirth': {'raw': user[6], 'encoded': '12345'}, 'address':{'raw': user[7], 'encoded': '12345'}, 'maritalStatus': {'raw': user[8], 'encoded': '12345'}, \
+            'multipleBirth': {'raw': user[9], 'encoded': '12345'}, 'contactRelationship': {'raw': user[10], 'encoded': '12345'}, 'contactName': {'raw': user[11], 'encoded': '12345'}, \
+            'contactPhone': {'raw': user[12], 'encoded': '12345'}, 'contactAddress': {'raw': user[13], 'encoded': '12345'}, 'contactGender': {'raw': user[14], 'encoded': '12345'}, \
+            'languages': {'raw': user[15], 'encoded': '12345'}, 'preferredLanguage': {'raw': user[16], 'encoded': '12345'}, 'generalPractitioner': {'raw': user[17], 'encoded': '12345'},
         })
         return await prover.send_message_ab(json.dumps({'cred_req_json': cred_req_json, 'cred_values_json': cred_values_json}), prover.issuer_verkey)
 
@@ -138,7 +138,7 @@ async def validate_credential(c_message, step):
         print(res)
         return res
 
-    
+
 
     proof_req = (await prover.recv_message_ba(c_message[0])).decode('utf-8')
     schema_id = (await prover.recv_message_ba(c_message[1])).decode('utf-8')
