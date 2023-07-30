@@ -15,7 +15,7 @@ bcrypt = Bcrypt(app)
 JWTManager(app)
 
 def get_db_connection():
-    conn = psycopg2.connect(host='localhost',
+    conn = psycopg2.connect(host='https://146.190.157.57',
                             database='postgres',
                             user=os.environ['DB_USERNAME'],
                             password=os.environ['DB_PASSWORD'])
@@ -85,8 +85,6 @@ def get_credentials(email):
             return credentials
         return None
     return None
-
-# ############################################# AUTH
 
 def updateRegister(request):
     conn = get_db_connection()

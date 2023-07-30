@@ -14,7 +14,6 @@ Finally, Prover stores Credential in its wallet.
 trust anchor sao os unicos que podem escrever did (issuers)
 """
 
-
 import asyncio
 import json
 import pprint
@@ -44,10 +43,8 @@ def print_log(value_color="", value_noncolor=""):
     print(HEADER + value_color + ENDC + str(value_noncolor))
 
 async def pool_genesys(protocol_version, pool_name, pool_config):
-    # Set protocol version 2 to work with Indy Node 1.4
     await pool.set_protocol_version(protocol_version)
     try:
-        # 1.
         print_log('\n1. Creates a new local pool ledger configuration that is used '
                   'later when connecting to ledger.\n')
         await pool.create_pool_ledger_config(pool_name, pool_config)
@@ -57,7 +54,6 @@ async def pool_genesys(protocol_version, pool_name, pool_config):
         else:
             print('Error occurred: %s' % e)
     try:
-        # 2.
         print_log('\n2. Open pool ledger and get handle from libindy\n')
         pool_handle = await pool.open_pool_ledger(pool_name, None)
     except IndyError as e:
@@ -76,13 +72,13 @@ async def issue_credential():
 
     await steward.simple_onboarding(issuer.did, issuer.verkey, issuer.role)
 
-    schema_id = await steward.new_schema('RegistroPaciente',  
+    schema_id = await steward.new_schema('RegistroPaciente',
                     ['name', 'phone', 'gender', \
                     'dateOfBirth', 'address', 'maritalStatus', \
                     'multipleBirth', 'contactRelationship', 'contactName', \
                     'contactPhone', 'contactAddress', 'contactGender', \
                     'languages', 'preferredLanguage', 'generalPractitioner',])
-    
+
     prover = Holder()
     await prover.create(pool_handle, json.dumps({"id": "prover_wallet"}), json.dumps({"key": "prover_wallet_key"}))
 
@@ -91,8 +87,6 @@ async def issue_credential():
 
     (cred_req_json, cred_req_metadata_json) = await prover.offer_to_cred_request(cred_offer_json, cred_def_id)
 
-
-    ### falta fazer o encoded automatico
     cred_values_json = json.dumps({
         'name': {'raw': 'matheus', 'encoded': '12345'}, 'phone': {'raw': '61912341234', 'encoded': '12345'}, 'gender': {'raw': 'm', 'encoded': '12345'}, \
         'dateOfBirth': {'raw': '01011999', 'encoded': '12345'}, 'address':{'raw': 'Brasilia', 'encoded': '12345'}, 'maritalStatus': {'raw': 'abc', 'encoded': '12345'}, \
@@ -115,31 +109,24 @@ async def issue_credential():
 
     proof_req = validator.build_proof_request('gvt', '', '')
 
-    ### falta buscar esses schemas e cred_defs sozinho no ledger (desaclopar)
     proof_json, schemas_json, cred_defs_json = await prover.proof_req_to_get_cred(proof_req, schema_id, cred_def_id)
     assert await validator.validate_proof(proof_req, proof_json, schemas_json, cred_defs_json, '{}')
 
-    ###
-
-    await issuer.delete()    
-    await prover.delete()    
-    await validator.delete()    
+    await issuer.delete()
+    await prover.delete()
+    await validator.delete()
 
     try:
-        # 20.
         print_log('\n20. Close and Deleting pool ledger config\n')
         await pool.close_pool_ledger(pool_handle)
         await pool.delete_pool_ledger_config(pool_name)
     except IndyError as e:
             print('Error occurred: %s' % e)
-    
-
 
 def main():
     loop = asyncio.get_event_loop()
     loop.run_until_complete(issue_credential())
     loop.close()
-
 
 if __name__ == '__main__':
     main()

@@ -33,38 +33,31 @@ def auth(token):
 
 @app.route("/testRequestsSend", methods=["GET", "POST"])
 def testRequestsSend():
-    # GET
-    URL = "https://localhost:5000/testRequestsReceiver"
+    URL = "https://146.190.157.57:5000/testRequestsReceiver"
     location = "Teste"
     PARAMS = {'data': location}
     r = requests.get(url = URL, params = PARAMS, verify=False)
     print(r)
 
-    # POST
-    API_ENDPOINT = "https://localhost:5000/testRequestsReceiver"
+    API_ENDPOINT = "https://146.190.157.57:5000/testRequestsReceiver"
     data = {'api_dev_key':'API_KEY',
             'api_option':'paste',
             'api_paste_code':'source_code',
             'api_paste_format':'python'}
     r = requests.post(url = API_ENDPOINT, data = data, verify=False)
-    print(r)
     return "Success"
 
 @app.route("/testRequestsReceiver", methods=["GET", "POST"])
 @cross_origin(supports_credentials=True)
 @async_action
 async def testRequestsReceiver():
-    print("\n\n\nRequisição recebida\n\n")
-    # print('args ', request.form.get('data').encode('utf-8'), request.form.get('step'))
     if request.form.get('step') == '2':
         data = (request.form.get('c_cred_offer_json'), request.form.get('c_cred_def_id'))
-        # print(data[0], data[1])
     elif request.form.get('step') == '3':
         data = (request.form.get('c_cred_json'), request.form.get('c_cred_def_id'))
     else:
         data = request.form.get('data')
     res = await ssi.issue_credential(data, request.form.get('step'), request.form.get('login'))
-    print(res)
     return res
 
 
@@ -72,7 +65,6 @@ async def testRequestsReceiver():
 @cross_origin(supports_credentials=True)
 @async_action
 async def testRequestsReceiver2():
-    print("\n\n\nRequisição recebida\n\n")
     if request.form.get('step') != '1':
         data = (request.form.get('c_proof_req'), request.form.get('c_schema_id'), request.form.get('c_cred_def_id'))
     else:
@@ -84,7 +76,6 @@ async def testRequestsReceiver2():
 @cross_origin(supports_credentials=True)
 @async_action
 async def home():
-    # return redirect(url_for('testRequestsReceiver2'))
     return "Success"
 
 @app.route("/generateCredential", methods=["GET", "POST"])
@@ -93,8 +84,6 @@ async def home():
 async def generateCredential():
     database.saveCredential(request)
     jsonData = request.get_json()
-    # user = database.user_by_login(jsonData['did'])
-    # await ssi.generate_credential(user)
     return "Success", 200
 
 @app.route("/getCredentials", methods=["GET", "POST"])

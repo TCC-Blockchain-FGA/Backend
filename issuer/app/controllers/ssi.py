@@ -42,7 +42,6 @@ def print_log(value_color="", value_noncolor=""):
     print(HEADER + value_color + ENDC + str(value_noncolor))
 
 async def pool_genesys(protocol_version, pool_name, pool_config):
-    # Set protocol version 2 to work with Indy Node 1.4
     try:
         bashCommand = "bash refresh.sh"
         process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
@@ -51,7 +50,6 @@ async def pool_genesys(protocol_version, pool_name, pool_config):
         pass
     await pool.set_protocol_version(protocol_version)
     try:
-        # 1.
         print_log('\n1. Creates a new local pool ledger configuration that is used '
                   'later when connecting to ledger.\n')
         await pool.create_pool_ledger_config(pool_name, pool_config)
@@ -61,7 +59,6 @@ async def pool_genesys(protocol_version, pool_name, pool_config):
         else:
             print('Error occurred: %s' % e)
     try:
-        # 2.
         print_log('\n2. Open pool ledger and get handle from libindy\n')
         pool_handle = await pool.open_pool_ledger(pool_name, None)
     except IndyError as e:
@@ -90,16 +87,13 @@ async def start_issuer():
     await issuer.new_cred_def(schema_id)
 
 async def issue_credential(login):
-    ## Issuer handshake DID with Holder
     connection_request = {
         'did': issuer.did,
         'nonce': hash(issuer.did)
     }
     c_message = await issuer.send_message_ab(json.dumps(connection_request), None)
 
-    # print(issuer.did)
-    # print(c_message)
-    URL = "https://localhost:5001/testRequestsReceiver"
+    URL = "https://146.190.157.57:5001/testRequestsReceiver"
     data = {'data': c_message, 'step': 1, 'login': login}
     c_res = requests.post(url = URL, data = data, verify=False)
     print(c_res._content)
@@ -112,137 +106,69 @@ async def issue_credential(login):
     holder_verkey = res['verkey']
     cred_offer_json = await issuer.new_cred_offer(issuer.cred_defs['RegistroPaciente'])
 
-    # print(cred_offer_json)
-
     c_cred_offer_json = await issuer.send_message_ab(cred_offer_json, holder_verkey)
     c_cred_def_id = await issuer.send_message_ab(issuer.cred_defs['RegistroPaciente'], holder_verkey)
-    URL = "https://localhost:5001/testRequestsReceiver"
+    URL = "https://146.190.157.57:5001/testRequestsReceiver"
     data = {'c_cred_offer_json': c_cred_offer_json.decode('latin-1'), 'c_cred_def_id': c_cred_def_id.decode('latin-1'), 'step': 2, 'login': login}
-    print(data)
-    # print(data)
+
     c_res = requests.post(url = URL, data = data, verify=False)
-    # print('res', c_res._content)
     jres = await issuer.recv_message_ba(c_res._content)
-    print('jres', jres)
     res = json.loads(jres)
-    print('res', res)
 
     cred_req_json = res['cred_req_json']
     cred_values_json = res['cred_values_json']
-    # ## Issuer Crypt
-    # ## Issuer send message to holder with (cred_offer_json, cred_def_id)
-    # # o cred_def_id ja esta dentro do cred_offer_json
-    # ## Holder Decrypt
-
-
-    # ### Holder<
-
-    # #prover = Holder()
-    # #await prover.create(pool_handle)
-    # #(cred_req_json, cred_req_metadata_json) = await prover.offer_to_cred_request(cred_offer_json, cred_def_id)
-
-    # ## falta fazer o encoded automatico
-    # #cred_values_json = json.dumps({
-    # #    'name': {'raw': 'matheus', 'encoded': '12345'}, 'phone': {'raw': '61912341234', 'encoded': '12345'}, 'gender': {'raw': 'm', 'encoded': '12345'}, \
-    # #    'dateOfBirth': {'raw': '01011999', 'encoded': '12345'}, 'address':{'raw': 'Brasilia', 'encoded': '12345'}, 'maritalStatus': {'raw': 'abc', 'encoded': '12345'}, \
-    # #    'multipleBirth': {'raw': '0', 'encoded': '12345'}, 'contactRelationship': {'raw': 'a', 'encoded': '12345'}, 'contactName': {'raw': 'mamama', 'encoded': '12345'}, \
-    # #    'contactPhone': {'raw': '61901011010', 'encoded': '12345'}, 'contactAddress': {'raw': 'Brasilia', 'encoded': '12345'}, 'contactGender': {'raw': 'm', 'encoded': '12345'}, \
-    # #    'languages': {'raw': 'pt', 'encoded': '12345'}, 'preferredLanguage': {'raw': 'pt', 'encoded': '12345'}, 'generalPractitioner': {'raw': 'abccba', 'encoded': '12345'},
-    # #})
-
-
-    # ### Holder>
-
-    # ## Holder Crypt
-    # ## Holder send message to Issuer with (cred_req_json, cred_values_json)
-    # ## Issuer Decrypt
-
 
     cred_json = await issuer.request_to_cred_issue(cred_offer_json, cred_req_json, cred_values_json)
 
     c_cred_json = await issuer.send_message_ab(cred_json, holder_verkey)
     c_cred_def_id = await issuer.send_message_ab(issuer.cred_defs['RegistroPaciente'], holder_verkey)
-    URL = "https://localhost:5001/testRequestsReceiver"
+    URL = "https://146.190.157.57:5001/testRequestsReceiver"
     data = {'c_cred_json': c_cred_json.decode('latin-1'), 'c_cred_def_id': c_cred_def_id.decode('latin-1'), 'step': 3, 'login': login}
     c_res = requests.post(url = URL, data = data, verify=False)
 
-    # ## Issuer Crypt
-    # ## Issuer send message to Holder with (cred_json, cred_def_id)
-    # ## Holder Decrypt
-
-    ### Holder<
-
-    #await prover.store_ver_cred(cred_req_metadata_json, cred_json, cred_def_id)
-
-    ### Holder>
-
 async def validate_credential():
-    ## Validator handshake DID with Holder
     proof_req = validator.build_proof_request('RegistroPaciente', '', '')
 
-    ## Validator handshake DID with Holder
     connection_request = {
         'did': validator.did,
         'nonce': hash(validator.did)
     }
     c_message = await validator.send_message_ab(json.dumps(connection_request), None)
 
-    # print(validator.did)
-    # print(c_message)
-    URL = "https://localhost:5001/testRequestsReceiver2"
+    URL = "https://146.190.157.57:5001/testRequestsReceiver2"
     data = {'data': c_message, 'step': 1}
     c_res = requests.post(url = URL, data = data, verify=False)
-    print(c_res._content)
     jres = await validator.recv_message_ba(c_res._content)
 
     res = json.loads(jres)
     holder_did = res['did']
     holder_verkey = res['verkey']
-    print('jres',jres)
-    print('proff', proof_req)
     c_proof_req = await validator.send_message_ab(proof_req, holder_verkey)
     c_schema_id = await validator.send_message_ab(issuer.schemas['RegistroPaciente'], holder_verkey)
     c_cred_def_id = await validator.send_message_ab(issuer.cred_defs['RegistroPaciente'], holder_verkey)
 
-    URL = "https://localhost:5001/testRequestsReceiver2"
+    URL = "https://146.190.157.57:5001/testRequestsReceiver2"
     data = {'c_proof_req': c_proof_req.decode('latin-1'), 'c_schema_id': c_schema_id.decode('latin-1'), 'c_cred_def_id':c_cred_def_id.decode('latin-1'), 'step': 2}
     c_res = requests.post(url = URL, data = data, verify=False)
-    print(c_res._content)
     jres = await validator.recv_message_ba(c_res._content)
     res = json.loads(jres)
     proof_json = res['proof_json']
     schemas_json = res['schemas_json']
     cred_defs_json = res['cred_defs_json']
 
-    ## Validator crypt
-    ## Validator send message to Holder with (proof_req, schema_id, cred_def_id)
-    ## Holder decrypt
-
-    #proof_json, schemas_json, cred_defs_json = await prover.proof_req_to_get_cred(proof_req, schema_id, cred_def_id)
-
-    ## Holder crypt
-    ## Holder send message to Validator with (proof_req)
-    ## Validator decrypt
-
     assert await validator.validate_proof(proof_req, proof_json, schemas_json, cred_defs_json, '{}')
-
-    ###
 
 async def delete_and_close(pool_handle):
 
     await issuer.delete()
-    #await prover.delete()
     await validator.delete()
 
     try:
-        # 20.
         print_log('\n20. Close and Deleting pool ledger config\n')
         await pool.close_pool_ledger(pool_handle)
         await pool.delete_pool_ledger_config(pool_name)
     except IndyError as e:
             print('Error occurred: %s' % e)
-
-
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -256,64 +182,6 @@ def init():
 
 async def run():
     await start_issuer()
-    # global pool_handle, org_did, org_wallet, org_transcript_cred_def_id
-
-    # bashCommand = "bash refresh.sh"
-    # process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-    # output, error = process.communicate()
-
-    # pool_name = 'pool1'
-    # logger.info("Open Pool Ledger: {}".format(pool_name))
-    # pool_genesis_txn_path = get_pool_genesis_txn_path(pool_name)
-    # pool_config = json.dumps({"genesis_txn": str(pool_genesis_txn_path)})
-    # await pool.set_protocol_version(PROTOCOL_VERSION)
-
-    # try:
-    #     await pool.create_pool_ledger_config(pool_name, pool_config)
-    # except IndyError as ex:
-    #     if ex.error_code == ErrorCode.PoolLedgerConfigAlreadyExistsError:
-    #         pass
-    # pool_handle = await pool.open_pool_ledger(pool_name, None)
-
-    # admin_wallet_config = json.dumps({"id": "admin_wallet"})
-    # admin_wallet_credentials = json.dumps({"key": "admin_wallet_key"})
-    # try:
-    #     await wallet.create_wallet(admin_wallet_config, admin_wallet_credentials)
-    # except IndyError as ex:
-    #     if ex.error_code == ErrorCode.WalletAlreadyExistsError:
-    #         pass
-
-    # admin_wallet = await wallet.open_wallet(admin_wallet_config, admin_wallet_credentials)
-
-    # admin_did_info = {'seed': '000000000000000000000000Steward1'}
-    # (admin_did, admin_key) = await did.create_and_store_my_did(admin_wallet, json.dumps(admin_did_info))
-
-    # org_wallet_config = json.dumps({"id": f'{uuid.uuid4()}'})
-    # org_wallet_credentials = json.dumps({"key": f'wallet_key_{uuid.uuid4()}'})
-    # org_wallet, admin_org_key, org_admin_did, org_admin_key, _ = \
-    #      await onboarding(pool_handle, "Sovrin Steward", admin_wallet, admin_did, "org", None, org_wallet_config, org_wallet_credentials)
-    # org_did = await get_verinym(pool_handle, "Sovrin Steward", admin_wallet, admin_did, admin_org_key, "org", org_wallet, org_admin_did, org_admin_key, 'TRUST_ANCHOR')
-
-    # (org_certificate_schema_id, org_certificate_schema) = \
-    #      await anoncreds.issuer_create_schema(org_did, 'Job-Certificate', '0.2',
-    #                                           json.dumps(['first_name', 'last_name', 'salary', 'employee_status',
-    #                                                       'experience']))
-
-    # await send_schema(pool_handle, org_wallet, org_did, org_certificate_schema)
-
-    # (transcript_schema_id, transcript_schema) = \
-    #     await anoncreds.issuer_create_schema(admin_did, 'Transcript', '1.2',
-    #                                          json.dumps(['first_name', 'last_name', 'degree', 'status',
-    #                                                      'year', 'average', 'ssn']))
-    # await send_schema(pool_handle, admin_wallet, admin_did, transcript_schema)
-
-    # time.sleep(1)
-    # (_, transcript_schema) = await get_schema(pool_handle, org_did, transcript_schema_id)
-    # (org_transcript_cred_def_id, org_transcript_cred_def_json) = \
-    #     await anoncreds.issuer_create_and_store_credential_def(org_wallet, org_did, transcript_schema,
-    #                                                            'TAG1', 'CL', '{"support_revocation": false}')
-
-    # await send_cred_def(pool_handle, org_wallet, org_did, org_transcript_cred_def_json)
 
 def create_wallet():
     wallet_config = json.dumps({"id": f'{uuid.uuid4()}'})
@@ -323,8 +191,8 @@ def create_wallet():
 async def generate_credential(user):
     user_wallet_config = user[18]
     user_wallet_credentials = user[19]
-    user_name = "Alice" #user[3]
-    user_last_name = "Garcia" #user[3]
+    user_name = "Alice"
+    user_last_name = "Garcia"
     user_degree = "Bachelor of Science, Marketing"
     user_status = "graduated"
     user_ssn = "123-45-6789"
