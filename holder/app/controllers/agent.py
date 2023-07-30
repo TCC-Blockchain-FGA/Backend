@@ -52,7 +52,7 @@ class Agent:
         except IndyError as e:
             print('Error occurred: %s' % e)
         return _did, _verkey
-    
+
     def create_wallet(self):
         wallet_config = json.dumps({"id": f'{uuid.uuid4()}'})
         wallet_credentials = json.dumps({"key": f'wallet_key_{uuid.uuid4()}'})
@@ -69,23 +69,20 @@ class Agent:
 
     async def close_wallet(self):
         try:
-            # 18.
             self.print_log('\n18. Closing both wallet_handles and pool\n')
             await wallet.close_wallet(self.wallet)
             self.wallet = 0
         except IndyError as e:
                 print('Error occurred: %s' % e)
 
-    
+
     async def delete(self):
         try:
-            # 18.
             self.print_log('\n18. Closing both wallet_handles and pool\n')
             await wallet.close_wallet(self.wallet)
         except IndyError as e:
                 print('Error occurred: %s' % e)
         try:
-            # 19.
             self.print_log('\n19. Deleting created wallet_handles\n')
             await wallet.delete_wallet(self.wallet_config, self.wallet_credentials)
         except IndyError as e:
@@ -106,10 +103,9 @@ class Steward(Agent):
         self.did , self.verkey = await self.generate_did(did_json)
         self.print_log('Steward DID: ', self.did)
         self.print_log('Steward Verkey: ', self.verkey)
-    
+
     async def simple_onboarding(self, trust_anchor_did, trust_anchor_verkey, role):
         try:
-            # 7.
             self.print_log('\n7. Building NYM request to add Trust Anchor to the ledger\n')
             nym_transaction_request = await ledger.build_nym_request(submitter_did=self.did,
                                                                     target_did=trust_anchor_did,
@@ -121,7 +117,6 @@ class Steward(Agent):
         except IndyError as e:
                 print('Error occurred: %s' % e)
         try:
-            # 8.
             self.print_log('\n8. Sending NYM request to the ledger\n')
             nym_transaction_response = await ledger.sign_and_submit_request(pool_handle=self.pool,
                                                                             wallet_handle=self.wallet,
@@ -134,11 +129,10 @@ class Steward(Agent):
 
     async def new_schema(self, schema_name, schema_atributes):
         try:
-            # 9.
             (schema_id, schema) = \
             await anoncreds.issuer_create_schema(self.did, schema_name, '1.0',
                                               json.dumps(schema_atributes))
- 
+
             self.print_log('Schema: ')
             pprint.pprint(schema)
             schema_request = await ledger.build_schema_request(self.did, schema)
@@ -147,7 +141,6 @@ class Steward(Agent):
         except IndyError as e:
                 print('Error occurred: %s' % e)
         try:
-            # 10.
             self.print_log('\n10. Sending the SCHEMA request to the ledger\n')
             schema_response = await ledger.sign_and_submit_request(self.pool, self.wallet, self.did, schema_request)
             self.print_log('Schema response:')
@@ -155,7 +148,7 @@ class Steward(Agent):
         except IndyError as e:
             print('Error occurred: %s' % e)
         self.schemas[schema_name] = schema_id
-        return schema_id                
+        return schema_id
 
 class Issuer(Agent):
     def __init__(self) -> None:
@@ -170,14 +163,14 @@ class Issuer(Agent):
         (self.did, self.verkey) = await self.generate_did("{}")
         self.print_log('Trust anchor DID: ', self.did)
         self.print_log('Trust anchor Verkey: ', self.verkey)
-    
+
     async def send_message_ab(self, message, to_verkey):
         if to_verkey != None:
             crypted_message = await crypto.pack_message(self.wallet, message, [to_verkey], self.verkey)
         else:
             crypted_message = message
         return crypted_message
-    
+
     async def recv_message_ba(self, crypted_message):
         """
         (Authcrypt mode)
@@ -191,7 +184,7 @@ class Issuer(Agent):
         """
         message = await crypto.unpack_message(self.wallet, crypted_message)
         return message['message']
-    
+
 
     async def get_schema(self, schema_id):
         try:
@@ -201,7 +194,7 @@ class Issuer(Agent):
         except IndyError as e:
                 print('Error occurred: %s' % e)
         return schema_json
-    
+
     async def new_cred_def(self, schema_id):
         try:
             # 11.
@@ -228,7 +221,6 @@ class Issuer(Agent):
 
     async def new_cred_offer(self, cred_def_id):
         try:
-            # 14.
             self.print_log(
                 '\n14. Issuer (Trust Anchor) is creating a Credential Offer for Prover\n')
             cred_offer_json = await anoncreds.issuer_create_credential_offer(self.wallet, cred_def_id)
@@ -241,7 +233,6 @@ class Issuer(Agent):
 
     async def request_to_cred_issue(self, cred_offer_json, cred_req_json, cred_values_json):
         try:
-            # 16.
             self.print_log(
                 '\n16. Issuer (Trust Anchor) creates Credential for Credential Request\n')
             (cred_json, _, _) = await anoncreds.issuer_create_credential(self.wallet, cred_offer_json, cred_req_json, cred_values_json, None, None)
@@ -251,8 +242,7 @@ class Issuer(Agent):
             cred_json = '{}'
             print('Error occurred: %s' % e)
         return cred_json
-    
-    #Holder/Prover
+
 class Holder(Agent):
     def __init__(self) -> None:
         super().__init__()
@@ -263,29 +253,25 @@ class Holder(Agent):
         self.did, self.verkey = await self.generate_did("{}")
         self.role = None
         try:
-            # 13.
             self.print_log('\n13. Prover is creating Master Secret\n')
             master_secret_name = 'master_secret'
             self.master_secret_id = await anoncreds.prover_create_master_secret(self.wallet, master_secret_name)
         except IndyError as e:
             print('Error occurred: %s' % e)
-    
-    async def connect_did(self, connection_request):
-        ##recv this request
 
+    async def connect_did(self, connection_request):
         self.print_log('\n Get key for did from other Peer connection request\n')
 
         to_verkey = await did.key_for_did(self.pool, self.wallet, connection_request['did'])
 
         self.print_log('\n Anoncrypt connection response for Holder with Peer DID, verkey and nonce\n')
-                    
+
         connection_response = json.dumps({
             'did': self.did,
             'verkey': self.verkey,
             'nonce': connection_request['nonce']
         })
         self.issuer_verkey = to_verkey
-        ##send this response 
         return await self.send_message_ab(connection_response, to_verkey)
 
     async def send_message_ab(self, message, to_verkey):
@@ -294,7 +280,7 @@ class Holder(Agent):
         else:
             crypted_message = message.encode('utf-8')
         return crypted_message
-    
+
     async def recv_message_ba(self, crypted_message: bytes):
         """
         (Authcrypt mode)
@@ -314,8 +300,6 @@ class Holder(Agent):
         _, message = await crypto.auth_decrypt(self.wallet, self.verkey, crypted_message)
         print(message)
         return message
-    
-    
 
     async def get_cred_def(self, cred_def_id):
         try:
@@ -324,7 +308,7 @@ class Holder(Agent):
             (_, cred_def_json) = await ledger.parse_get_cred_def_response(get_cred_def_response)
         except IndyError as e:
             print('Error occurred: %s' % e)
-            
+
         return cred_def_json
 
     async def offer_to_cred_request(self, cred_offer_json, cred_def_id):
@@ -340,23 +324,21 @@ class Holder(Agent):
         except IndyError as e:
             print('Error occurred: %s' % e)
         return (cred_req_json, cred_req_metadata_json)
-    
+
     async def store_ver_cred(self, cred_req_metadata_json, cred_json, cred_def_id):
         try:
             cred_def_json = await self.get_cred_def(cred_def_id)
-            # 17.
             self.print_log('\n17. Prover processes and stores Credential\n')
             await anoncreds.prover_store_credential(self.wallet, None, cred_req_metadata_json, cred_json, cred_def_json, None)
 
         except IndyError as e:
             print('Error occurred: %s' % e)
-    
+
     async def proof_req_to_get_cred(self, proof_req_json, schema_id, cred_def_id):
         claims_for_proof_request_json = await anoncreds.prover_get_credentials_for_proof_req(self.wallet, proof_req_json)
         claims_for_proof_request = json.loads(claims_for_proof_request_json)
         self.print_log('Claims for Proof Request: ')
         pprint.pprint(claims_for_proof_request)
-        # 19.
         self.print_log('\n19. Prover creates Proof for Proof Request\n')
         referent = claims_for_proof_request['attrs']['attr1_referent'][0]['cred_info']['referent']
         self.print_log('Referent: ')
@@ -369,7 +351,7 @@ class Holder(Agent):
             'requested_predicates': {},
         })
         pprint.pprint(json.loads(requested_credentials_json))
-    
+
         schemas_json = {}
         get_schema_request = await ledger.build_get_schema_request(self.did, schema_id)
         get_schema_response = await ledger.submit_request(self.pool, get_schema_request)
@@ -381,21 +363,17 @@ class Holder(Agent):
         get_cred_def_response = await ledger.submit_request(self.pool, get_cred_def_request)
         (received_cred_def_id, received_cred_def) = await ledger.parse_get_cred_def_response(get_cred_def_response)
         cred_defs_json[received_cred_def_id] = json.loads(received_cred_def)
-        
+
         revoc_regs_json = json.dumps({})
 
         proof_json = await anoncreds.prover_create_proof(self.wallet, proof_req_json, requested_credentials_json, self.master_secret_id, json.dumps(schemas_json), json.dumps(cred_defs_json), revoc_regs_json)
-        
-        return proof_json, schemas_json, cred_defs_json
-        
-        #assert 'Alex' == proof['requested_proof']['revealed_attrs']['attr1_referent'][1]
 
+        return proof_json, schemas_json, cred_defs_json
 
 class Validator(Agent):
     def __init__(self) -> None:
         super().__init__()
         pass
-
 
     async def create(self, pool_handle):
         try:
@@ -424,8 +402,5 @@ class Validator(Agent):
         return json.dumps(proof_request)
 
     async def validate_proof(self, proof_req_json, proof_json, schemas_json, cred_defs_json, revoc_regs_json):
-        #assert 'Alex' == proof['requested_proof']['revealed_attrs']['attr1_referent'][1]
-
-        # 20.
         self.print_log('\n20.Verifier is verifying proof from Prover\n')
         return await anoncreds.verifier_verify_proof(proof_req_json, proof_json, json.dumps(schemas_json), json.dumps(cred_defs_json), revoc_regs_json, "{}")

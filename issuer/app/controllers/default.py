@@ -33,21 +33,17 @@ def auth(token):
 
 @app.route("/testRequestsSend", methods=["GET", "POST"])
 def testRequestsSend():
-    # GET
-    URL = "https://localhost:5001/testRequestsReceiver"
+    URL = "https://146.190.157.57:5001/testRequestsReceiver"
     location = "Teste"
     PARAMS = {'data': location}
     r = requests.get(url = URL, params = PARAMS, verify=False)
-    print(r)
 
-    # POST
-    API_ENDPOINT = "https://localhost:5001/testRequestsReceiver"
+    API_ENDPOINT = "https://146.190.157.57:5001/testRequestsReceiver"
     data = {'api_dev_key':'API_KEY',
             'api_option':'paste',
             'api_paste_code':'source_code',
             'api_paste_format':'python'}
     r = requests.post(url = API_ENDPOINT, data = data, verify=False)
-    print(r)
     return "Success"
 
 @app.route("/testRequestsReceiver", methods=["GET", "POST"])
@@ -55,7 +51,6 @@ def testRequestsSend():
 @async_action
 async def testRequestsReceiver():
     await ssi.issue_credential(request.args.get('login'))
-    print("\n\nRequisição recebida\n\n")
     return "Success"
 
 @app.route("/testRequestsReceiver2", methods=["GET", "POST"])
@@ -63,7 +58,6 @@ async def testRequestsReceiver():
 @async_action
 async def testRequestsReceiver2():
     await ssi.validate_credential()
-    print("\n\nRequisição recebida\n\n")
     return "Success"
 
 @app.route("/", methods=["GET", "POST"])
@@ -76,8 +70,6 @@ def home():
 async def generateCredential():
     database.saveCredential(request)
     jsonData = request.get_json()
-    # user = database.user_by_login(jsonData['did'])
-    # await ssi.generate_credential(user)
     return "Success", 200
 
 @app.route("/getCredentials", methods=["GET", "POST"])

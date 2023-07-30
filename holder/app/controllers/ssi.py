@@ -22,7 +22,6 @@ pool_genesis_txn_path = get_pool_genesis_txn_path(pool_name)
 pool_config = json.dumps({"genesis_txn": str(pool_genesis_txn_path)})
 prover = Holder()
 
-
 def init():
     run_coroutine(run)
 
@@ -33,7 +32,6 @@ def print_log(value_color="", value_noncolor=""):
     print(HEADER + value_color + ENDC + str(value_noncolor))
 
 async def pool_genesys(protocol_version, pool_name, pool_config):
-    # Set protocol version 2 to work with Indy Node 1.4
     try:
         bashCommand = "bash refresh.sh"
         process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
@@ -42,7 +40,6 @@ async def pool_genesys(protocol_version, pool_name, pool_config):
         pass
     await pool.set_protocol_version(protocol_version)
     try:
-        # 1.
         print_log('\n1. Creates a new local pool ledger configuration that is used '
                   'later when connecting to ledger.\n')
         await pool.create_pool_ledger_config(pool_name, pool_config)
@@ -65,20 +62,11 @@ async def start_holder():
     await prover.create(pool_handle)
 
 async def issue_credential(connection_request, step, login):
-    # print("\n\n\n", connection_request)
-
     if step == '1':
         print(connection_request)
 
         res = await prover.connect_did(json.loads(connection_request))
-        print(res)
         return res
-        #cred_offer_json = await issuer.new_cred_offer(cred_def_id)
-
-        ## Issuer Crypt
-        ## Issuer send message to holder with (cred_offer_json, cred_def_id)
-        # o cred_def_id ja esta dentro do cred_offer_json
-        ## Holder Decrypt
 
     if step == '2':
         message1 = (await prover.recv_message_ba(connection_request[0])).decode('utf-8')
@@ -86,9 +74,7 @@ async def issue_credential(connection_request, step, login):
         message = {'cred_offer_json': message1, 'cred_def_id': message2}
         print('message', message)
         (cred_req_json, cred_req_metadata_json) = await prover.offer_to_cred_request(message['cred_offer_json'], message['cred_def_id'])
-        #### precisa parar e fazer o cadastro do forms
         prover.cred_req_metadata_json = cred_req_metadata_json
-        ## falta fazer o encoded automatico
         user = database.user_by_login(login)
         cred_values_json = json.dumps({
             'name': {'raw': user[3], 'encoded': '12345'}, 'phone': {'raw': user[2], 'encoded': '12345'}, 'gender': {'raw': user[5], 'encoded': '12345'}, \
@@ -99,18 +85,7 @@ async def issue_credential(connection_request, step, login):
         })
         return await prover.send_message_ab(json.dumps({'cred_req_json': cred_req_json, 'cred_values_json': cred_values_json}), prover.issuer_verkey)
 
-    ## Holder Crypt
-    ## Holder send message to Issuer with (cred_req_json, cred_values_json)
-    ## Issuer Decrypt
-
-    #
-    # cred_json = await issuer.request_to_cred_issue(cred_offer_json, cred_req_json, cred_values_json)
-
-    ## Issuer Crypt
-    ## Issuer send message to Holder with (cred_json, cred_def_id)
-    ## Holder Decrypt
     if step == '3':
-        # message = json.loads(prover.recv_message_ba(connection_request))
         message1 = (await prover.recv_message_ba(connection_request[0])).decode('utf-8')
         message2 = (await prover.recv_message_ba(connection_request[1])).decode('utf-8')
         message = {'cred_json': message1, 'cred_def_id': message2}
@@ -123,14 +98,6 @@ async def issue_credential(connection_request, step, login):
 
 async def validate_credential(c_message, step):
 
-    ## Validator handshake DID with Holder
-
-    #
-    #proof_req = validator.build_proof_request('gvt', '', '')
-
-    ## Validator crypt
-    ## Validator send message to Holder with (proof_req)
-    ## Holder decrypt
     if step == '1':
         print(c_message)
 
@@ -138,58 +105,34 @@ async def validate_credential(c_message, step):
         print(res)
         return res
 
-
-
     proof_req = (await prover.recv_message_ba(c_message[0])).decode('utf-8')
     schema_id = (await prover.recv_message_ba(c_message[1])).decode('utf-8')
     cred_def_id = (await prover.recv_message_ba(c_message[2])).decode('utf-8')
     message = {'proof_req': proof_req, 'schema_id': schema_id, 'cred_def_id':cred_def_id}
 
-    print('message', message)
-    # message = json.loads(prover.recv_message_ba(c_message))
-
-    ## falta buscar esses schemas e cred_defs sozinho no ledger (desaclopar)
     proof_json, schemas_json, cred_defs_json = await prover.proof_req_to_get_cred(message['proof_req'], message['schema_id'], message['cred_def_id'])
 
     return await prover.send_message_ab(json.dumps({'proof_json': proof_json, 'schemas_json': schemas_json, 'cred_defs_json': cred_defs_json}), prover.issuer_verkey)
-    ## Holder crypt
-    ## Holder send message to Validator with (proof_req)
-    ## Validator decrypt
-
-    #
-    #assert await validator.validate_proof(proof_req, proof_json, schemas_json, cred_defs_json, '{}')
-
-    ###
 
 async def delete_and_close(pool_handle):
 
     await prover.delete()
 
     try:
-        # 20.
         print_log('\n20. Close and Deleting pool ledger config\n')
         await pool.close_pool_ledger(pool_handle)
         await pool.delete_pool_ledger_config(pool_name)
     except IndyError as e:
             print('Error occurred: %s' % e)
 
-
-
-
-
-
 async def run():
     await start_holder()
-    # issue_credential(prover)
-    # validate_credential(prover)
-    # delete_and_close(prover, pool_handle)
-
 
 async def generate_credential(user):
     user_wallet_config = user[18]
     user_wallet_credentials = user[19]
-    user_name = "Alice" #user[3]
-    user_last_name = "Garcia" #user[3]
+    user_name = "Alice"
+    user_last_name = "Garcia"
     user_degree = "Bachelor of Science, Marketing"
     user_status = "graduated"
     user_ssn = "123-45-6789"
@@ -490,7 +433,7 @@ async def prover_get_entities_from_ledger(pool_handle, _did, identifiers, actor)
         cred_defs[received_cred_def_id] = json.loads(received_cred_def)
 
         if 'rev_reg_seq_no' in item:
-            pass  # TODO Create Revocation States
+            pass
 
     return json.dumps(schemas), json.dumps(cred_defs), json.dumps(rev_states)
 
@@ -510,7 +453,7 @@ async def verifier_get_entities_from_ledger(pool_handle, _did, identifiers, acto
         cred_defs[received_cred_def_id] = json.loads(received_cred_def)
 
         if 'rev_reg_seq_no' in item:
-            pass  # TODO Get Revocation Definitions and Revocation Registries
+            pass
 
     return json.dumps(schemas), json.dumps(cred_defs), json.dumps(rev_reg_defs), json.dumps(rev_regs)
 
