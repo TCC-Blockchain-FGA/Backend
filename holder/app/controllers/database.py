@@ -15,7 +15,9 @@ bcrypt = Bcrypt(app)
 JWTManager(app)
 
 def get_db_connection():
-    conn = psycopg2.connect(host='https://146.190.157.57',
+    # conn = psycopg2.connect(host='https://146.190.157.57',
+    conn = psycopg2.connect(host='https://localhost',
+                            port='5432',
                             database='postgres',
                             user=os.environ['DB_USERNAME'],
                             password=os.environ['DB_PASSWORD'])

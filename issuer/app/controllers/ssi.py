@@ -73,7 +73,8 @@ async def start_issuer():
     await issuer.create(pool_handle)
     await validator.create(pool_handle)
 
-
+    database.updateVerkey(issuer.verkey)
+    
     await steward.simple_onboarding(issuer.did, issuer.verkey, issuer.role)
     await steward.simple_onboarding(validator.did, validator.verkey, validator.role)
 
